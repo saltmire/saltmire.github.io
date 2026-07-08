@@ -90,13 +90,22 @@ def parse_post(path):
     return meta
 
 
+def utm(url, slug):
+    """Tag an outbound product link so itch's analytics attributes the source."""
+    sep = "&" if "?" in url else "?"
+    return (f"{url}{sep}utm_source=saltmire-blog&utm_medium=cta"
+            f"&utm_campaign={slug}")
+
+
 def render_body(meta):
     body = markdown.markdown(meta["body_md"], extensions=["fenced_code", "tables"])
     if meta.get("product_url") and meta.get("product_name"):
+        link = utm(meta["product_url"], meta["slug"])
         body += (
             f'<div class="cta">Built this the long way once too many times. '
             f'<b>{html.escape(meta["product_name"])}</b> does it as a drop-in tool: '
-            f'<a href="{meta["product_url"]}">{meta["product_url"]}</a></div>'
+            f'<a href="{link}" data-product="{html.escape(meta["product_name"])}" '
+            f'class="product-cta">{meta["product_url"]}</a></div>'
         )
     return body
 
