@@ -1,0 +1,114 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How to save and load your game in Godot 4 (the honest way)</title>
+<meta name="description" content="A complete, working save/load system in Godot 4 using FileAccess and JSON — plus the four production problems nobody warns you about.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-save-load.html">
+<meta property="og:type" content="article"><meta property="og:title" content="How to save and load your game in Godot 4 (the honest way)">
+<meta property="og:description" content="A complete, working save/load system in Godot 4 using FileAccess and JSON — plus the four production problems nobody warns you about."><meta property="og:url" content="https://saltmire.github.io/godot-4-save-load.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to save and load your game in Godot 4 (the honest way)","description":"A complete, working save/load system in Godot 4 using FileAccess and JSON \u2014 plus the four production problems nobody warns you about.","datePublished":"2026-07-08","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-save-load.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>How to save and load your game in Godot 4 (the honest way)</h1><time datetime="2026-07-08">2026-07-08</time><p>Every game needs to save state, and Godot 4 gives you everything you need in the
+standard library. Here is a real, working system you can paste into a project
+today — followed by the parts that quietly break in production.</p>
+<h2>The minimal version</h2>
+<p>Godot's <code>FileAccess</code> writes bytes; <code>JSON</code> turns a <code>Dictionary</code> into a string and
+back. Put the two together and you have save/load:</p>
+<pre><code class="language-gdscript">const SAVE_PATH := &quot;user://savegame.json&quot;
+
+func save_game(data: Dictionary) -&gt; void:
+    var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+    f.store_string(JSON.stringify(data))
+    f.close()
+
+func load_game() -&gt; Dictionary:
+    if not FileAccess.file_exists(SAVE_PATH):
+        return {}
+    var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+    var text := f.get_as_text()
+    f.close()
+    var parsed = JSON.parse_string(text)
+    return parsed if typeof(parsed) == TYPE_DICTIONARY else {}
+</code></pre>
+<p>Call <code>save_game({"hp": 80, "level": 3})</code> and later <code>var d = load_game()</code>. That is
+genuinely all you need for a jam game.</p>
+<h2>Why <code>user://</code> and not <code>res://</code></h2>
+<p><code>res://</code> is your project — it is <strong>read-only</strong> in an exported game. Always save to
+<code>user://</code>, which maps to a real per-user folder on desktop and to IndexedDB on the
+web export. Same API either way, so your code does not change per platform.</p>
+<h2>Multiple save slots</h2>
+<p>Do not hardcode one path. Key the filename by a slot name so you can build a
+load-game menu:</p>
+<pre><code class="language-gdscript">func slot_path(slot: String) -&gt; String:
+    return &quot;user://saves/%s.json&quot; % slot
+
+func save_to(slot: String, data: Dictionary) -&gt; void:
+    DirAccess.make_dir_recursive_absolute(&quot;user://saves&quot;)
+    var f := FileAccess.open(slot_path(slot), FileAccess.WRITE)
+    f.store_string(JSON.stringify(data))
+    f.close()
+</code></pre>
+<p>To list existing slots for a menu, walk the directory with <code>DirAccess</code>.</p>
+<h2>The four things that bite later</h2>
+<p>The snippet above works — until real players use it. These are the problems that
+turn a two-line save system into a two-week refactor:</p>
+<ol>
+<li><strong>Corruption.</strong> A crash or power-off mid-write leaves a half-written file.
+   <code>JSON.parse_string</code> returns <code>null</code> and the player loses everything. The fix is
+   to write to a temp file, then rename over the real one, and keep a rotating
+   backup to restore from.</li>
+<li><strong>Save editing.</strong> A plain JSON file in <code>user://</code> is trivial to open and edit —
+   players will change their gold to 9999. If that matters, you need to encrypt
+   the file (<code>FileAccess.open_encrypted_with_pass</code>).</li>
+<li><strong>Schema changes.</strong> You ship an update that renames <code>coins</code> to <code>gold</code>. Every
+   existing save still has <code>coins</code>. Without a migration step, old saves crash or
+   silently lose data.</li>
+<li><strong>Save size.</strong> A big world save is megabytes of JSON. gzip typically cuts that
+   by ~90%, but only helps if you wire compression in from the start.</li>
+</ol>
+<p>None of these are hard individually. The problem is that they all show up <em>after</em>
+launch, one at a time, in bug reports.</p>
+<h2>If you just want it handled</h2>
+<p>You can build all four yourself — or drop in a tool that already has them, with a
+headless self-test that proves each one with a real number. That is exactly what
+Saltmire Save Lite (free) and Saltmire Save (the full version) are for: the same
+one-line <code>Save.write</code> / <code>Save.read</code> API, with encryption, backups, migration and
+compression when you need them.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Save Lite</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-save-lite">https://saltmire.itch.io/saltmire-save-lite</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>

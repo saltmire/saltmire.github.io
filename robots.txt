@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://saltmire.github.io/sitemap.xml
