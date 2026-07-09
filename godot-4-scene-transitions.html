@@ -1,0 +1,188 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>5 Godot 4 scene transition effects (and how to build each one)</title>
+<meta name="description" content="Fade, iris wipe, pixelate, slide, and dissolve — five working Godot 4 scene transition techniques with GDScript code you can drop in today.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-scene-transitions.html">
+<meta property="og:type" content="article"><meta property="og:title" content="5 Godot 4 scene transition effects (and how to build each one)">
+<meta property="og:description" content="Fade, iris wipe, pixelate, slide, and dissolve — five working Godot 4 scene transition techniques with GDScript code you can drop in today."><meta property="og:url" content="https://saltmire.github.io/godot-4-scene-transitions.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"5 Godot 4 scene transition effects (and how to build each one)","description":"Fade, iris wipe, pixelate, slide, and dissolve \u2014 five working Godot 4 scene transition techniques with GDScript code you can drop in today.","datePublished":"2026-07-09","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-scene-transitions.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>5 Godot 4 scene transition effects (and how to build each one)</h1><time datetime="2026-07-09">2026-07-09</time><p>Swapping scenes in Godot 4 is one line: <code>get_tree().change_scene_to_file()</code>. Making
+that swap <em>feel</em> intentional is the part that takes effort. Here are five transition
+effects — from dead simple to shader-powered — with paste-able GDScript for each.</p>
+<h2>1. Fade to black</h2>
+<p>The classic. A <code>ColorRect</code> at <code>CanvasLayer</code> 100 sits invisible on top of everything.
+Tween its alpha to 1, change the scene, tween back to 0:</p>
+<pre><code class="language-gdscript"># SceneTransition.gd — autoload
+@onready var overlay: ColorRect = $CanvasLayer/Overlay  # full-viewport, black, alpha 0
+
+func fade_to(path: String, duration := 0.3) -&gt; void:
+    var t := create_tween()
+    t.tween_property(overlay, &quot;modulate:a&quot;, 1.0, duration)
+    await t.finished
+    get_tree().change_scene_to_file(path)
+    t = create_tween()
+    t.tween_property(overlay, &quot;modulate:a&quot;, 0.0, duration)
+</code></pre>
+<p>Call it: <code>SceneTransition.fade_to("res://scenes/Level2.tscn")</code>. Squaring the tween
+curve (<code>Tween.TRANS_SINE</code>) makes the fade-out feel less abrupt.</p>
+<h2>2. Iris wipe (circle close)</h2>
+<p>An iris wipe closes a circle over the screen, swaps the scene, then opens again.
+You need one shader on the <code>ColorRect</code>:</p>
+<pre><code class="language-glsl">// iris.gdshader
+shader_type canvas_item;
+uniform float radius : hint_range(0.0, 1.5) = 1.5;
+uniform vec2  center = vec2(0.5, 0.5);
+
+void fragment() {
+    float dist = length(UV - center);
+    COLOR = vec4(0.0, 0.0, 0.0, step(radius, dist));
+}
+</code></pre>
+<p>Then in GDScript:</p>
+<pre><code class="language-gdscript">func iris_to(path: String, duration := 0.4) -&gt; void:
+    var mat: ShaderMaterial = overlay.material
+    var t := create_tween()
+    t.tween_method(func(v): mat.set_shader_parameter(&quot;radius&quot;, v), 1.5, 0.0, duration)
+    await t.finished
+    get_tree().change_scene_to_file(path)
+    t = create_tween()
+    t.tween_method(func(v): mat.set_shader_parameter(&quot;radius&quot;, v), 0.0, 1.5, duration)
+</code></pre>
+<p>Point <code>center</code> at a character or door for a dramatic theatrical close.</p>
+<h2>3. Pixelate</h2>
+<p>The screen dissolves into chunky blocks before the cut. Capture the screen with
+<code>hint_screen_texture</code> and floor each UV to the nearest block:</p>
+<pre><code class="language-glsl">// pixelate.gdshader
+shader_type canvas_item;
+uniform float block_size : hint_range(1.0, 128.0) = 1.0;
+uniform sampler2D screen_texture : hint_screen_texture, filter_nearest;
+
+void fragment() {
+    vec2 vp = 1.0 / SCREEN_PIXEL_SIZE;
+    vec2 snapped = floor(SCREEN_UV * vp / block_size) * block_size / vp;
+    COLOR = texture(screen_texture, snapped);
+}
+</code></pre>
+<p>Tween <code>block_size</code> from <code>1.0</code> up to <code>64.0</code> (fully pixelated), change scene, tween
+back down. Looks great for retro or lo-fi aesthetics.</p>
+<h2>4. Slide / pan</h2>
+<p>No shader needed — just move nodes. Instantiate the next scene offscreen, then tween
+both the current scene out and the new one in simultaneously:</p>
+<pre><code class="language-gdscript">func slide_to(path: String, dir := Vector2.LEFT, duration := 0.4) -&gt; void:
+    var vp := get_viewport().get_visible_rect().size
+    var next := load(path).instantiate()
+    next.position = -dir * vp
+    get_tree().root.add_child(next)
+
+    var t := create_tween().set_parallel()
+    t.tween_property(get_tree().current_scene, &quot;position&quot;, dir * vp, duration)
+    t.tween_property(next, &quot;position&quot;, Vector2.ZERO, duration)
+    await t.finished
+
+    get_tree().current_scene.queue_free()
+    get_tree().current_scene = next
+</code></pre>
+<p>Pass <code>Vector2.RIGHT</code> / <code>Vector2.UP</code> / <code>Vector2.DOWN</code> to control slide direction.
+Add <code>.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)</code> for a polished
+mobile-menu feel.</p>
+<h2>5. Dissolve (noise dither)</h2>
+<p>A dissolve removes pixels in a pseudo-random order using a grayscale noise texture
+as a threshold map — much more interesting than a uniform fade:</p>
+<pre><code class="language-glsl">// dissolve.gdshader
+shader_type canvas_item;
+uniform float threshold : hint_range(0.0, 1.0) = 0.0;
+uniform sampler2D noise : hint_default_white;
+uniform sampler2D screen_texture : hint_screen_texture, filter_nearest;
+
+void fragment() {
+    float n = texture(noise, UV).r;
+    if (n &lt; threshold) { discard; }
+    COLOR = texture(screen_texture, SCREEN_UV);
+}
+</code></pre>
+<p>Assign any seamless noise texture to <code>noise</code>, then tween <code>threshold</code> from <code>0.0</code> to
+<code>1.0</code> to dissolve out. Use a SubViewport to capture the outgoing scene so the
+dissolve continues to run after the scene has already changed.</p>
+<h2>Which one to use</h2>
+<table>
+<thead>
+<tr>
+<th>Effect</th>
+<th>Complexity</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fade</td>
+<td>Trivial</td>
+<td>Any genre — never wrong</td>
+</tr>
+<tr>
+<td>Iris</td>
+<td>One shader</td>
+<td>Dramatic story beats, cutscenes</td>
+</tr>
+<tr>
+<td>Pixelate</td>
+<td>One shader</td>
+<td>Retro, lo-fi, pixel-art games</td>
+</tr>
+<tr>
+<td>Slide</td>
+<td>Pure GDScript</td>
+<td>Menu flows, mobile feel</td>
+</tr>
+<tr>
+<td>Dissolve</td>
+<td>Shader + noise texture</td>
+<td>Cinematic, horror, RPG</td>
+</tr>
+</tbody>
+</table>
+<h2>Skip the wiring</h2>
+<p>Each effect above is ~15 lines of code. The time cost is the autoload setup,
+managing which <code>CanvasLayer</code> owns what, and making the <code>await</code>-able API safe against
+overlapping calls. If you want all five (plus wipes and a smooth fade-in-on-load
+default) as a single drop-in for Godot 4, that is what Saltmire Transitions is.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Transitions</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-transitions-scene-transition-kit-for-godot-4?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-scene-transitions" data-product="Saltmire Transitions" class="product-cta">https://saltmire.itch.io/saltmire-transitions-scene-transition-kit-for-godot-4</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
