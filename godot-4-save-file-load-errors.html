@@ -1,0 +1,136 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>&quot;Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files&quot;</title>
+<meta name="description" content="The three save/load errors that break Godot 4 games — JSON parse error at end of file, attempt to call on a null instance, and file not found — with the cause and the exact fix for each.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-save-file-load-errors.html">
+<meta property="og:type" content="article"><meta property="og:title" content="&quot;Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files&quot;">
+<meta property="og:description" content="The three save/load errors that break Godot 4 games — JSON parse error at end of file, attempt to call on a null instance, and file not found — with the cause and the exact fix for each."><meta property="og:url" content="https://saltmire.github.io/godot-4-save-file-load-errors.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"\"Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files\"","description":"The three save/load errors that break Godot 4 games \u2014 JSON parse error at end of file, attempt to call on a null instance, and file not found \u2014 with the cause and the exact fix for each.","datePublished":"2026-07-10","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-save-file-load-errors.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>&quot;Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files&quot;</h1><time datetime="2026-07-10">2026-07-10</time><p>You shipped a save system, it worked on your machine, and now the console is red on
+load. Save/load bugs are nasty because they only show up <em>after</em> a write already
+happened — the bad data is already on disk. Here are the three errors that break
+Godot 4 saves most often, why each one happens, and the exact fix.</p>
+<h2>1. <code>JSON Parse Error: ... at line N</code></h2>
+<p><strong>Symptom.</strong> On load you get something like:</p>
+<pre><code>JSON Parse Error: Unexpected end of stream at line 1
+</code></pre>
+<p>or a parse error pointing at a spot in the middle of your file.</p>
+<p><strong>Cause.</strong> The file was written partially. This almost always means the game
+crashed (or was force-quit) <em>during</em> the write, or two systems wrote to the same
+file at once. <code>FileAccess</code> flushes on <code>close()</code>; if you never reach <code>close()</code>, you
+get a truncated, unparseable file.</p>
+<p><strong>Fix.</strong> Never write in place. Write to a temp file, then rename it over the real
+one — rename is atomic on every desktop OS, so the save is either the old file or
+the complete new one, never a half of each:</p>
+<pre><code class="language-gdscript">func save_state(data: Dictionary, path := &quot;user://save.json&quot;) -&gt; void:
+    var tmp := path + &quot;.tmp&quot;
+    var f := FileAccess.open(tmp, FileAccess.WRITE)
+    if f == null:
+        push_error(&quot;Save failed to open %s: %d&quot; % [tmp, FileAccess.get_open_error()])
+        return
+    f.store_string(JSON.stringify(data))
+    f.close()  # flush BEFORE the rename
+    DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp),
+                              ProjectSettings.globalize_path(path))
+</code></pre>
+<p>And always guard the read instead of trusting <code>JSON.parse_string</code>:</p>
+<pre><code class="language-gdscript">func load_state(path := &quot;user://save.json&quot;) -&gt; Dictionary:
+    if not FileAccess.file_exists(path):
+        return {}
+    var text := FileAccess.get_file_as_string(path)
+    var parsed = JSON.parse_string(text)
+    if parsed == null or typeof(parsed) != TYPE_DICTIONARY:
+        push_warning(&quot;Save at %s is corrupt — falling back to empty.&quot; % path)
+        return {}
+    return parsed
+</code></pre>
+<h2>2. <code>Invalid call ... Attempt to call ... on a null instance</code></h2>
+<p><strong>Symptom.</strong></p>
+<pre><code>Invalid call. Nonexistent function 'get' in base 'Nil'.
+</code></pre>
+<p>right after you read the save back.</p>
+<p><strong>Cause.</strong> <code>JSON.parse_string</code> returns <code>null</code> on failure, and you used the result
+without checking. It also <em>cannot</em> return your original types — a <code>Vector2</code> you
+stored becomes a plain array or <code>null</code>, a custom object becomes a Dictionary. So
+<code>saved.player_pos.x</code> blows up because <code>player_pos</code> is not a <code>Vector2</code> anymore.</p>
+<p><strong>Fix.</strong> Serialize non-JSON types explicitly on the way out, and rebuild them on the
+way in. Don't assume the shape survived:</p>
+<pre><code class="language-gdscript"># on save
+data[&quot;player_pos&quot;] = {&quot;x&quot;: player.position.x, &quot;y&quot;: player.position.y}
+
+# on load
+var d: Dictionary = load_state()
+if d.has(&quot;player_pos&quot;):
+    var p = d[&quot;player_pos&quot;]
+    player.position = Vector2(p.get(&quot;x&quot;, 0.0), p.get(&quot;y&quot;, 0.0))
+</code></pre>
+<p>Every read from the loaded dictionary should use <code>.get(key, default)</code> so a missing
+key gives a sane value instead of a <code>Nil</code>.</p>
+<h2>3. <code>Error opening file</code> / values silently wrong after an update</h2>
+<p><strong>Symptom.</strong> Either the file just isn't there on a fresh install, or a returning
+player loads an old save and half their state is missing after you added fields.</p>
+<p><strong>Cause.</strong> Two separate issues wearing the same coat: (a) you read before any save
+exists, and (b) the save's <em>schema</em> changed between versions and old files don't
+have the new keys.</p>
+<p><strong>Fix.</strong> Version your saves and migrate forward. Stamp a version number on write,
+and run migrations on read so an old file becomes a valid current one:</p>
+<pre><code class="language-gdscript">const SAVE_VERSION := 3
+
+func migrate(d: Dictionary) -&gt; Dictionary:
+    var v := int(d.get(&quot;version&quot;, 1))
+    if v &lt; 2:
+        d[&quot;settings&quot;] = d.get(&quot;settings&quot;, {&quot;volume&quot;: 1.0})  # added in v2
+    if v &lt; 3:
+        d[&quot;playtime&quot;] = d.get(&quot;playtime&quot;, 0.0)              # added in v3
+    d[&quot;version&quot;] = SAVE_VERSION
+    return d
+</code></pre>
+<p>Now old saves keep loading instead of erroring, and new fields get safe defaults.</p>
+<h2>The pattern behind all three</h2>
+<p>Every one of these bugs is the same root cause: treating the disk as trustworthy.
+It isn't. A robust save layer writes atomically, validates on read, defaults every
+missing key, and migrates old schemas — none of which is hard, but all of which is
+easy to forget until a player loses a save. If you'd rather not re-derive the atomic
+write, corruption guard, backup fallback, and schema migration in every project,
+that's exactly the boring, tested wiring Saltmire Save is.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Save</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-save?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-save-file-load-errors" data-product="Saltmire Save" class="product-cta">https://saltmire.itch.io/saltmire-save</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
