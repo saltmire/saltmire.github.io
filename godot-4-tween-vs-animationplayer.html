@@ -1,0 +1,177 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>&quot;Tween vs AnimationPlayer in Godot 4 — which to use and when&quot;</title>
+<meta name="description" content="Tween and AnimationPlayer both animate values in Godot 4, but they solve different problems. Here&#x27;s a clear comparison table, real code for each, and a verdict so you pick the right tool the first time.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-tween-vs-animationplayer.html">
+<meta property="og:type" content="article"><meta property="og:title" content="&quot;Tween vs AnimationPlayer in Godot 4 — which to use and when&quot;">
+<meta property="og:description" content="Tween and AnimationPlayer both animate values in Godot 4, but they solve different problems. Here&#x27;s a clear comparison table, real code for each, and a verdict so you pick the right tool the first time."><meta property="og:url" content="https://saltmire.github.io/godot-4-tween-vs-animationplayer.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"\"Tween vs AnimationPlayer in Godot 4 \u2014 which to use and when\"","description":"Tween and AnimationPlayer both animate values in Godot 4, but they solve different problems. Here's a clear comparison table, real code for each, and a verdict so you pick the right tool the first time.","datePublished":"2026-07-14","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-tween-vs-animationplayer.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>&quot;Tween vs AnimationPlayer in Godot 4 — which to use and when&quot;</h1><time datetime="2026-07-14">2026-07-14</time><p>Both <code>Tween</code> and <code>AnimationPlayer</code> animate values in Godot 4. Both can move, fade,
+scale, and colour things. If you've ever stared at a new node and wondered which one
+to reach for, here's the honest breakdown.</p>
+<h2>Quick comparison</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Tween</th>
+<th>AnimationPlayer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lives in</td>
+<td>code (<code>create_tween()</code>)</td>
+<td>a node in the scene tree</td>
+</tr>
+<tr>
+<td>Keyframes</td>
+<td>no — set target value + duration</td>
+<td>yes, visual timeline editor</td>
+</tr>
+<tr>
+<td>Multi-property tracks</td>
+<td>no (chains, not tracks)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Blend / cross-fade</td>
+<td>no</td>
+<td>yes, via <code>AnimationTree</code></td>
+</tr>
+<tr>
+<td>Reacts to runtime values</td>
+<td>yes — target set in code</td>
+<td>harder, needs manual sync</td>
+</tr>
+<tr>
+<td>Easing / curves</td>
+<td>built-in enums</td>
+<td>curve editor</td>
+</tr>
+<tr>
+<td>Restartable mid-flight</td>
+<td>yes — <code>kill()</code> + new tween</td>
+<td>yes — <code>stop()</code> + <code>play()</code></td>
+</tr>
+<tr>
+<td>Scene export</td>
+<td>not really</td>
+<td>yes, included in <code>.tscn</code></td>
+</tr>
+<tr>
+<td>Best for</td>
+<td>juice, reactive effects, one-shot polish</td>
+<td>locomotion, cutscenes, multi-track sync</td>
+</tr>
+</tbody>
+</table>
+<h2>When Tween wins: reactive, code-driven effects</h2>
+<p>Tween is not a node. You call <code>create_tween()</code> and it runs and frees itself — no
+leftover scene nodes, no cleanup. That makes it the right tool for short, reactive
+effects where the target value is only known at runtime.</p>
+<p><strong>Pop-scale on hit:</strong></p>
+<pre><code class="language-gdscript">func pop(target: Node2D) -&gt; void:
+    var tw := create_tween()
+    tw.tween_property(target, &quot;scale&quot;, Vector2(1.35, 1.35), 0.08) \
+        .set_ease(Tween.EASE_OUT)
+    tw.tween_property(target, &quot;scale&quot;, Vector2.ONE, 0.14) \
+        .set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+</code></pre>
+<p><strong>Slide a UI panel in from a dynamic off-screen position:</strong></p>
+<pre><code class="language-gdscript">func slide_in(panel: Control, start_x: float) -&gt; void:
+    panel.position.x = start_x
+    var tw := create_tween()
+    tw.tween_property(panel, &quot;position:x&quot;, 0.0, 0.3) \
+        .set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+</code></pre>
+<p><strong>Fade and free a damage number:</strong></p>
+<pre><code class="language-gdscript">func float_number(label: Label, value: int) -&gt; void:
+    label.text = str(value)
+    var tw := create_tween().set_parallel(true)
+    tw.tween_property(label, &quot;position:y&quot;, label.position.y - 40, 0.6)
+    tw.tween_property(label, &quot;modulate:a&quot;, 0.0, 0.5).set_delay(0.1)
+    tw.chain().tween_callback(label.queue_free)
+</code></pre>
+<p>Tweens are also chainable (<code>.chain()</code>) and parallelizable (<code>.set_parallel(true)</code>),
+so you can sequence multi-step effects entirely in code without an editor.</p>
+<h2>When AnimationPlayer wins: authored sequences and character animation</h2>
+<p>AnimationPlayer is a node you add to the scene. Open the Animation panel, and every
+property on any child node can be a keyframe. That makes it the right tool for
+anything you want to <em>edit visually</em> — especially when more than two properties move
+in sync, or when animations need to blend.</p>
+<p><strong>A melee attack that moves the body, flashes the sprite, and emits a particle:</strong></p>
+<pre><code class="language-gdscript">func attack() -&gt; void:
+    $AnimationPlayer.play(&quot;attack&quot;)
+    await $AnimationPlayer.animation_finished
+    _return_to_idle()
+</code></pre>
+<p>All the timing lives in the authored clip. Tweak it in the editor without touching
+code.</p>
+<p><strong>Blended locomotion (walk → run → idle):</strong></p>
+<p>Add an <code>AnimationTree</code> on top of <code>AnimationPlayer</code> and build a state machine or
+blend space — then drive it from code with a single float:</p>
+<pre><code class="language-gdscript">$AnimationTree.set(&quot;parameters/blend_position&quot;, velocity.length() / max_speed)
+</code></pre>
+<p>That cross-fade would take hundreds of lines to replicate with tweens.</p>
+<h2>The rule of thumb</h2>
+<blockquote>
+<p><strong>Reach for Tween</strong> when the target value is decided at runtime, the effect is
+under ~0.5 s, and it's self-contained (scale pop, slide in, fade out, number float).</p>
+<p><strong>Reach for AnimationPlayer</strong> when you want to edit the sequence visually, more
+than two properties move together, or animations need to blend.</p>
+</blockquote>
+<p>Most games use both: AnimationPlayer for character locomotion and cutscenes, Tweens
+for every piece of reactive UI juice.</p>
+<h2>Godot 4 vs Godot 3: the one breaking change</h2>
+<p>In Godot 3, <code>Tween</code> was a node you added to the scene tree. In Godot 4 it's
+instantiated with <code>create_tween()</code> directly on a <code>Node</code> (or <code>get_tree().create_tween()</code>
+if you're outside a node). There are no more stale tween nodes dangling in your tree.
+If you're porting from Godot 3, that's the only real rewire needed.</p>
+<h2>If you want the juice without the wiring</h2>
+<p>Screen shake, hit-stop, floating damage numbers, and sprite flash are the most
+common tween-based juice effects every action game needs. If you'd rather not
+re-derive each one per project, <strong>Saltmire Juice</strong> is a free, MIT-licensed add-on
+that ships all of them as one-call autoloads — <code>Juice.shake()</code>, <code>Juice.hit_stop()</code>,
+<code>Juice.damage_number()</code> — drop it in and move on.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Juice</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-juice?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-tween-vs-animationplayer" data-product="Saltmire Juice" class="product-cta">https://saltmire.itch.io/saltmire-juice</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
