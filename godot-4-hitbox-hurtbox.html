@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
-<title>&quot;Godot 4 hitbox and hurtbox the easy way (damage, teams, i-frames, knockback)&quot;</title>
+<title>Godot 4 hitbox and hurtbox the easy way (damage, teams, i-frames, knockback)</title>
 <meta name="description" content="How to build a clean hitbox/hurtbox system in Godot 4 with Area2D — collision layers and masks explained, plus damage, teams to stop friendly fire, invincibility frames and knockback, with copy-paste code.">
 <link rel="canonical" href="https://saltmire.github.io/godot-4-hitbox-hurtbox.html">
-<meta property="og:type" content="article"><meta property="og:title" content="&quot;Godot 4 hitbox and hurtbox the easy way (damage, teams, i-frames, knockback)&quot;">
+<meta property="og:type" content="article"><meta property="og:title" content="Godot 4 hitbox and hurtbox the easy way (damage, teams, i-frames, knockback)">
 <meta property="og:description" content="How to build a clean hitbox/hurtbox system in Godot 4 with Area2D — collision layers and masks explained, plus damage, teams to stop friendly fire, invincibility frames and knockback, with copy-paste code."><meta property="og:url" content="https://saltmire.github.io/godot-4-hitbox-hurtbox.html">
 <meta property="og:site_name" content="Saltmire Devlog">
 <meta name="twitter:card" content="summary">
@@ -37,13 +37,13 @@ border-left:3px solid var(--accent);border-radius:8px}
 .post-list p{color:var(--muted);margin:.4em 0 0}
 footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"\"Godot 4 hitbox and hurtbox the easy way (damage, teams, i-frames, knockback)\"","description":"How to build a clean hitbox/hurtbox system in Godot 4 with Area2D \u2014 collision layers and masks explained, plus damage, teams to stop friendly fire, invincibility frames and knockback, with copy-paste code.","datePublished":"2026-07-12","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-hitbox-hurtbox.html"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Godot 4 hitbox and hurtbox the easy way (damage, teams, i-frames, knockback)","description":"How to build a clean hitbox/hurtbox system in Godot 4 with Area2D \u2014 collision layers and masks explained, plus damage, teams to stop friendly fire, invincibility frames and knockback, with copy-paste code.","datePublished":"2026-07-12","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-hitbox-hurtbox.html"}</script>
 </head><body><div class="wrap">
 <header class="site"><div class="brand">Saltmire</div>
 <div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
 <nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
 <a href="https://github.com/saltmire">GitHub</a></nav></header><main>
-<article><h1>&quot;Godot 4 hitbox and hurtbox the easy way (damage, teams, i-frames, knockback)&quot;</h1><time datetime="2026-07-12">2026-07-12</time><p>Almost every action game needs the same thing: something that deals damage, and
+<article><h1>Godot 4 hitbox and hurtbox the easy way (damage, teams, i-frames, knockback)</h1><time datetime="2026-07-12">2026-07-12</time><p>Almost every action game needs the same thing: something that deals damage, and
 something that takes it. In Godot 4 the raw tools are <code>Area2D</code> + <code>CollisionShape2D</code>,
 but wiring them into a real hit is where people get stuck — collision layers vs
 masks, stopping the player from hurting itself, not draining a target every physics

@@ -1,0 +1,11 @@
+# Bytecode — nao pertence ao repo (isto AQUI e a raiz do site publicado no GitHub Pages).
+# Estavam versionados 2 .pyc ate 17/07/2026; um build noutro Python gerava .pyc novo e sujava
+# o diff de todo post.
+__pycache__/
+*.py[cod]
+
+# Credenciais dos crosspost (devto/bluesky/mastodon). NUNCA versionar.
+*_key.txt
+*_token.txt
+*_creds.json
+.env

@@ -84,7 +84,15 @@ def parse_post(path):
     for line in m.group(1).splitlines():
         if ":" in line:
             k, v = line.split(":", 1)
-            meta[k.strip()] = v.strip()
+            v = v.strip()
+            # Tira aspas envolventes do valor. Sem isto, `title: "Foo"` virava literalmente
+            # <title>"Foo"</title> no HTML (e no Dev.to/Bluesky) -- aspas visiveis no
+            # resultado de busca. 3 dos 6 posts sairam assim ate 17/07/2026, porque cada
+            # sessao escrevia o front-matter com ou sem aspas e o parser passava adiante.
+            # Corrigir aqui vale pra todo post, escrito por quem for.
+            if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+                v = v[1:-1].strip()
+            meta[k.strip()] = v
     meta["body_md"] = m.group(2).strip()
     meta["_file"] = os.path.basename(path)
     return meta

@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
-<title>&quot;Tween vs AnimationPlayer in Godot 4 — which to use and when&quot;</title>
+<title>Tween vs AnimationPlayer in Godot 4 — which to use and when</title>
 <meta name="description" content="Tween and AnimationPlayer both animate values in Godot 4, but they solve different problems. Here&#x27;s a clear comparison table, real code for each, and a verdict so you pick the right tool the first time.">
 <link rel="canonical" href="https://saltmire.github.io/godot-4-tween-vs-animationplayer.html">
-<meta property="og:type" content="article"><meta property="og:title" content="&quot;Tween vs AnimationPlayer in Godot 4 — which to use and when&quot;">
+<meta property="og:type" content="article"><meta property="og:title" content="Tween vs AnimationPlayer in Godot 4 — which to use and when">
 <meta property="og:description" content="Tween and AnimationPlayer both animate values in Godot 4, but they solve different problems. Here&#x27;s a clear comparison table, real code for each, and a verdict so you pick the right tool the first time."><meta property="og:url" content="https://saltmire.github.io/godot-4-tween-vs-animationplayer.html">
 <meta property="og:site_name" content="Saltmire Devlog">
 <meta name="twitter:card" content="summary">
@@ -37,13 +37,13 @@ border-left:3px solid var(--accent);border-radius:8px}
 .post-list p{color:var(--muted);margin:.4em 0 0}
 footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"\"Tween vs AnimationPlayer in Godot 4 \u2014 which to use and when\"","description":"Tween and AnimationPlayer both animate values in Godot 4, but they solve different problems. Here's a clear comparison table, real code for each, and a verdict so you pick the right tool the first time.","datePublished":"2026-07-14","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-tween-vs-animationplayer.html"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Tween vs AnimationPlayer in Godot 4 \u2014 which to use and when","description":"Tween and AnimationPlayer both animate values in Godot 4, but they solve different problems. Here's a clear comparison table, real code for each, and a verdict so you pick the right tool the first time.","datePublished":"2026-07-14","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-tween-vs-animationplayer.html"}</script>
 </head><body><div class="wrap">
 <header class="site"><div class="brand">Saltmire</div>
 <div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
 <nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
 <a href="https://github.com/saltmire">GitHub</a></nav></header><main>
-<article><h1>&quot;Tween vs AnimationPlayer in Godot 4 — which to use and when&quot;</h1><time datetime="2026-07-14">2026-07-14</time><p>Both <code>Tween</code> and <code>AnimationPlayer</code> animate values in Godot 4. Both can move, fade,
+<article><h1>Tween vs AnimationPlayer in Godot 4 — which to use and when</h1><time datetime="2026-07-14">2026-07-14</time><p>Both <code>Tween</code> and <code>AnimationPlayer</code> animate values in Godot 4. Both can move, fade,
 scale, and colour things. If you've ever stared at a new node and wondered which one
 to reach for, here's the honest breakdown.</p>
 <h2>Quick comparison</h2>

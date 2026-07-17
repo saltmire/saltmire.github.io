@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
-<title>&quot;Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files&quot;</title>
+<title>Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files</title>
 <meta name="description" content="The three save/load errors that break Godot 4 games — JSON parse error at end of file, attempt to call on a null instance, and file not found — with the cause and the exact fix for each.">
 <link rel="canonical" href="https://saltmire.github.io/godot-4-save-file-load-errors.html">
-<meta property="og:type" content="article"><meta property="og:title" content="&quot;Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files&quot;">
+<meta property="og:type" content="article"><meta property="og:title" content="Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files">
 <meta property="og:description" content="The three save/load errors that break Godot 4 games — JSON parse error at end of file, attempt to call on a null instance, and file not found — with the cause and the exact fix for each."><meta property="og:url" content="https://saltmire.github.io/godot-4-save-file-load-errors.html">
 <meta property="og:site_name" content="Saltmire Devlog">
 <meta name="twitter:card" content="summary">
@@ -37,13 +37,13 @@ border-left:3px solid var(--accent);border-radius:8px}
 .post-list p{color:var(--muted);margin:.4em 0 0}
 footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"\"Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files\"","description":"The three save/load errors that break Godot 4 games \u2014 JSON parse error at end of file, attempt to call on a null instance, and file not found \u2014 with the cause and the exact fix for each.","datePublished":"2026-07-10","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-save-file-load-errors.html"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files","description":"The three save/load errors that break Godot 4 games \u2014 JSON parse error at end of file, attempt to call on a null instance, and file not found \u2014 with the cause and the exact fix for each.","datePublished":"2026-07-10","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-save-file-load-errors.html"}</script>
 </head><body><div class="wrap">
 <header class="site"><div class="brand">Saltmire</div>
 <div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
 <nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
 <a href="https://github.com/saltmire">GitHub</a></nav></header><main>
-<article><h1>&quot;Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files&quot;</h1><time datetime="2026-07-10">2026-07-10</time><p>You shipped a save system, it worked on your machine, and now the console is red on
+<article><h1>Fixing Godot 4 save-file load errors: JSON parse error, null instance, and missing files</h1><time datetime="2026-07-10">2026-07-10</time><p>You shipped a save system, it worked on your machine, and now the console is red on
 load. Save/load bugs are nasty because they only show up <em>after</em> a write already
 happened — the bad data is already on disk. Here are the three errors that break
 Godot 4 saves most often, why each one happens, and the exact fix.</p>
