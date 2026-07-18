@@ -1,0 +1,136 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>6 Godot 4 game feel tricks (each just a few lines of GDScript)</title>
+<meta name="description" content="Squash-and-stretch, sprite flash, damage numbers, knockback, slow-motion and a camera punch — six drop-in Godot 4 game feel techniques with copy-paste GDScript.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-game-feel-tricks.html">
+<meta property="og:type" content="article"><meta property="og:title" content="6 Godot 4 game feel tricks (each just a few lines of GDScript)">
+<meta property="og:description" content="Squash-and-stretch, sprite flash, damage numbers, knockback, slow-motion and a camera punch — six drop-in Godot 4 game feel techniques with copy-paste GDScript."><meta property="og:url" content="https://saltmire.github.io/godot-4-game-feel-tricks.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"6 Godot 4 game feel tricks (each just a few lines of GDScript)","description":"Squash-and-stretch, sprite flash, damage numbers, knockback, slow-motion and a camera punch \u2014 six drop-in Godot 4 game feel techniques with copy-paste GDScript.","datePublished":"2026-07-18","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-game-feel-tricks.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>6 Godot 4 game feel tricks (each just a few lines of GDScript)</h1><time datetime="2026-07-18">2026-07-18</time><p>"Game feel" is the difference between a hit that just subtracts HP and a hit that
+<em>lands</em>. In Godot 4 almost none of it needs plugins — it's small, cheap touches
+stacked on top of each other. Here are six you can paste in today, each only a few
+lines.</p>
+<h2>1. Squash and stretch on impact</h2>
+<p>Nothing sells a hit like a quick scale pop. Punch the scale up, then let it spring
+back with an elastic transition:</p>
+<pre><code class="language-gdscript">func pop(node: Node2D, amount := 0.25, duration := 0.25) -&gt; void:
+    var base := node.scale
+    var t := create_tween()
+    node.scale = base * (1.0 + amount)
+    t.tween_property(node, &quot;scale&quot;, base, duration) \
+        .set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+</code></pre>
+<p>Call <code>pop($Sprite2D)</code> on landing, on pickup, on button press — anywhere you want a
+tiny "yes".</p>
+<h2>2. Sprite flash on hit</h2>
+<p>A single white frame reads instantly as "that connected". Drive a <code>flash_amount</code>
+uniform on a tiny shader and tween it back to zero:</p>
+<pre><code class="language-glsl">// flash.gdshader
+shader_type canvas_item;
+uniform float flash_amount : hint_range(0.0, 1.0) = 0.0;
+void fragment() {
+    vec4 c = texture(TEXTURE, UV);
+    COLOR = vec4(mix(c.rgb, vec3(1.0), flash_amount), c.a);
+}
+</code></pre>
+<pre><code class="language-gdscript">func flash(sprite: CanvasItem, duration := 0.12) -&gt; void:
+    var mat: ShaderMaterial = sprite.material
+    mat.set_shader_parameter(&quot;flash_amount&quot;, 1.0)
+    create_tween().tween_method(
+        func(v): mat.set_shader_parameter(&quot;flash_amount&quot;, v), 1.0, 0.0, duration)
+</code></pre>
+<h2>3. Pooled damage numbers</h2>
+<p>Floating numbers give weight to every hit — but instancing a Label per hit thrashes
+the GC. Spawn from a small pool instead and tween position + fade:</p>
+<pre><code class="language-gdscript">func damage_number(pos: Vector2, value: int) -&gt; void:
+    var label := _pool_get()          # reuse a Label from a preallocated array
+    label.text = str(value)
+    label.global_position = pos
+    label.modulate.a = 1.0
+    var t := create_tween().set_parallel()
+    t.tween_property(label, &quot;global_position&quot;, pos + Vector2(0, -32), 0.5)
+    t.tween_property(label, &quot;modulate:a&quot;, 0.0, 0.5)
+    t.chain().tween_callback(func(): _pool_return(label))
+</code></pre>
+<p>The pool is just an array you fill on <code>_ready()</code> and hand out round-robin — no
+<code>instantiate()</code> on the hot path.</p>
+<h2>4. Knockback that eases out</h2>
+<p>Instant teleport-back feels cheap; a short eased slide feels physical:</p>
+<pre><code class="language-gdscript">func knockback(body: Node2D, dir: Vector2, strength := 180.0, duration := 0.15) -&gt; void:
+    var target := body.global_position + dir.normalized() * strength
+    create_tween().tween_property(body, &quot;global_position&quot;, target, duration) \
+        .set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+</code></pre>
+<p>For a <code>CharacterBody2D</code> you'd feed this into <code>velocity</code> instead, but the easing idea
+is the same: fast start, soft stop.</p>
+<h2>5. Slow-motion on the big hit</h2>
+<p>Reserve time dilation for moments that earn it — a finisher, a boss stagger. Drop
+<code>Engine.time_scale</code>, wait in <em>real</em> time (unscaled), then ramp back:</p>
+<pre><code class="language-gdscript">func slowmo(scale := 0.05, real_seconds := 0.15) -&gt; void:
+    Engine.time_scale = scale
+    var timer := get_tree().create_timer(real_seconds, true, false, true) # ignore_time_scale
+    await timer.timeout
+    create_tween().tween_method(
+        func(v): Engine.time_scale = v, scale, 1.0, 0.2)
+</code></pre>
+<p>The <code>true</code> at the end of <code>create_timer</code> is what makes it ignore <code>time_scale</code> — miss
+that and your slow-mo waits in slow-mo and never ends.</p>
+<h2>6. Camera punch</h2>
+<p>A quick directional shove on the camera, snapping back, adds impact without a full
+shake routine:</p>
+<pre><code class="language-gdscript">func punch(cam: Camera2D, dir: Vector2, amount := 8.0, duration := 0.12) -&gt; void:
+    var base := cam.offset
+    cam.offset = base + dir.normalized() * amount
+    create_tween().tween_property(cam, &quot;offset&quot;, base, duration) \
+        .set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+</code></pre>
+<p>Point <code>dir</code> opposite the hit — punch the camera <em>away</em> from the impact and the brain
+fills in the force.</p>
+<h2>Stacking them</h2>
+<p>The magic is in combining: on a real hit you might <code>flash()</code> the target, <code>pop()</code> it,
+spawn a <code>damage_number()</code>, <code>knockback()</code> it, and <code>punch()</code> the camera — all in the
+same frame. Individually each is a nudge; together they're the difference between
+flat and juicy. The only hard part is wiring them into one clean call and keeping the
+tweens from stepping on each other, which is exactly the boilerplate Saltmire Impact
+folds into a single line.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Impact</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-impact?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-game-feel-tricks" data-product="Saltmire Impact" class="product-cta">https://saltmire.itch.io/saltmire-impact</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
