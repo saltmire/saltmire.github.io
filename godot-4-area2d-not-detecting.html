@@ -1,0 +1,125 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>Godot 4 Area2D not detecting hits? 6 reasons area_entered isn&#x27;t firing</title>
+<meta name="description" content="Your Godot 4 Area2D won&#x27;t detect collisions and area_entered never fires. Here are the 6 real causes — monitoring flags, layers vs masks, missing shapes, and the overlap-on-activate trap — each with the fix.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-area2d-not-detecting.html">
+<meta property="og:type" content="article"><meta property="og:title" content="Godot 4 Area2D not detecting hits? 6 reasons area_entered isn&#x27;t firing">
+<meta property="og:description" content="Your Godot 4 Area2D won&#x27;t detect collisions and area_entered never fires. Here are the 6 real causes — monitoring flags, layers vs masks, missing shapes, and the overlap-on-activate trap — each with the fix."><meta property="og:url" content="https://saltmire.github.io/godot-4-area2d-not-detecting.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Godot 4 Area2D not detecting hits? 6 reasons area_entered isn't firing","description":"Your Godot 4 Area2D won't detect collisions and area_entered never fires. Here are the 6 real causes \u2014 monitoring flags, layers vs masks, missing shapes, and the overlap-on-activate trap \u2014 each with the fix.","datePublished":"2026-07-21","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-area2d-not-detecting.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>Godot 4 Area2D not detecting hits? 6 reasons area_entered isn&#x27;t firing</h1><time datetime="2026-07-21">2026-07-21</time><p>You connected <code>area_entered</code>, you can see the two areas overlapping in the editor, and
+nothing happens. This is the single most common Godot 4 combat bug, and it's almost
+always one of these six things. Work down the list — they're ordered by how often
+they're the culprit.</p>
+<h2>1. <code>monitoring</code> is off (or the wrong area is monitoring)</h2>
+<p>An <code>Area2D</code> only <em>detects</em> others when <code>monitoring = true</code>. And detection has a
+direction: the scanner needs <code>monitoring</code>; the thing being found needs
+<code>monitorable</code>. If both areas monitor each other you get double hits; if neither does,
+you get silence.</p>
+<pre><code class="language-gdscript"># the attacker scans, doesn't need to be found:
+hitbox.monitoring = true
+hitbox.monitorable = false
+# the target is found, doesn't scan:
+hurtbox.monitoring = false
+hurtbox.monitorable = true
+</code></pre>
+<h2>2. Layers and masks don't line up (the classic)</h2>
+<p><code>collision_layer</code> is <em>what you are</em>; <code>collision_mask</code> is <em>what you look for</em>. For A to
+detect B, <strong>A's mask must include B's layer.</strong> Same number in both <code>layer</code> fields with
+empty masks = they never see each other.</p>
+<pre><code class="language-gdscript"># hurtbox exists on layer 3:
+hurtbox.collision_layer = 0
+hurtbox.set_collision_layer_value(3, true)
+hurtbox.collision_mask = 0
+# hitbox looks for layer 3:
+hitbox.collision_layer = 0
+hitbox.set_collision_mask_value(3, true)
+</code></pre>
+<p>Check this in code, not just the inspector — a parent scene or tween can overwrite
+layer bits at runtime and the panel won't show it.</p>
+<h2>3. There's no enabled <code>CollisionShape2D</code></h2>
+<p>An <code>Area2D</code> with no shape (or a shape whose <code>disabled</code> is true, or whose <code>shape</code>
+resource is null) has nothing to collide with. It fails silently — no error, no
+warning.</p>
+<pre><code class="language-gdscript">var cs := hitbox.get_node(&quot;CollisionShape2D&quot;)
+assert(cs.shape != null and not cs.disabled, &quot;hitbox shape missing/disabled&quot;)
+</code></pre>
+<p>A frequent trap: calling <code>cs.disabled = true</code> to "turn off" an attack and forgetting
+to flip it back before the next swing.</p>
+<h2>4. The signal is connected to the wrong node</h2>
+<p><code>area_entered</code> fires on the area that's doing the monitoring. If you connected the
+signal on the hurtbox but the hurtbox has <code>monitoring = false</code> (correct, per #1), the
+callback never runs. Connect <code>area_entered</code> on the <strong>monitoring</strong> area, or use
+<code>body_entered</code> if the other side is a <code>CharacterBody2D</code>/<code>StaticBody2D</code> rather than an
+<code>Area2D</code>.</p>
+<pre><code class="language-gdscript">hitbox.area_entered.connect(_on_hit)   # hitbox monitors, so it emits
+</code></pre>
+<p>Mixing up <code>area_entered</code> (Area↔Area) and <code>body_entered</code> (Area↔Body) is its own silent
+no-op — pick the one that matches what the other node actually is.</p>
+<h2>5. The hit started already overlapping (the melee trap)</h2>
+<p><code>area_entered</code> only fires the frame two areas <em>begin</em> overlapping. If your hitbox
+turns on while it's already sitting on top of the target — extremely common for a
+melee swing that activates mid-contact — the signal never fires and the hit is lost.
+Scan what's already inside when you activate:</p>
+<pre><code class="language-gdscript">func activate() -&gt; void:
+    monitoring = true
+    for area in get_overlapping_areas():
+        _on_hit(area)
+</code></pre>
+<p>Note <code>get_overlapping_areas()</code> is only accurate <em>after</em> at least one physics frame of
+monitoring — if you enable and scan in the same frame, call
+<code>await get_tree().physics_frame</code> first.</p>
+<h2>6. Physics is paused or the node is disabled</h2>
+<p>If the area's <code>process_mode</code> is <code>PROCESS_MODE_DISABLED</code>, or the tree is paused and the
+node doesn't have <code>PROCESS_MODE_ALWAYS</code>, monitoring quietly stops. This bites during
+hit-stop / slow-motion, when you drop <code>Engine.time_scale</code> or pause the tree for feel.</p>
+<pre><code class="language-gdscript"># keep the hitbox live through a pause used for hit-stop:
+hitbox.process_mode = Node.PROCESS_MODE_ALWAYS
+</code></pre>
+<h2>The fast way to never hit this again</h2>
+<p>Every bug above comes from the same place: <code>Area2D</code> gives you the raw primitive and
+makes you wire the rules — direction, layers, shapes, overlap-on-activate, pause
+behavior — by hand, with no errors when you get it wrong. If you'd rather drop in two
+nodes that already handle all six, that's exactly what Saltmire Hitbox is:
+<code>Hitbox2D</code> / <code>Hurtbox2D</code> with zero layer setup, correct monitoring out of the box, and
+the melee overlap case handled for you.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Hitbox</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-hitbox?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-area2d-not-detecting" data-product="Saltmire Hitbox" class="product-cta">https://saltmire.itch.io/saltmire-hitbox</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
