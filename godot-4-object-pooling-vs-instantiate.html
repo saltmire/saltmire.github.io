@@ -1,0 +1,178 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>Object pooling vs instantiate in Godot 4 — when it actually matters</title>
+<meta name="description" content="A practical Godot 4 comparison of object pooling and plain instantiate() — what each really costs, the frame-time numbers that decide it, and a small pool you can paste into a bullet-heaven or wave-based game.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-object-pooling-vs-instantiate.html">
+<meta property="og:type" content="article"><meta property="og:title" content="Object pooling vs instantiate in Godot 4 — when it actually matters">
+<meta property="og:description" content="A practical Godot 4 comparison of object pooling and plain instantiate() — what each really costs, the frame-time numbers that decide it, and a small pool you can paste into a bullet-heaven or wave-based game."><meta property="og:url" content="https://saltmire.github.io/godot-4-object-pooling-vs-instantiate.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Object pooling vs instantiate in Godot 4 \u2014 when it actually matters","description":"A practical Godot 4 comparison of object pooling and plain instantiate() \u2014 what each really costs, the frame-time numbers that decide it, and a small pool you can paste into a bullet-heaven or wave-based game.","datePublished":"2026-07-31","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-object-pooling-vs-instantiate.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>Object pooling vs instantiate in Godot 4 — when it actually matters</h1><time datetime="2026-07-31">2026-07-31</time><p>"Just pool everything" is the most repeated performance advice in gamedev, and it is
+wrong about half the time. Pooling buys you predictable frame time, and it costs you
+code you have to keep correct forever. Here is the honest comparison — what each option
+really does in Godot 4, and the number that tells you which one you need.</p>
+<h2>What <code>instantiate()</code> actually costs</h2>
+<p>Every <code>PackedScene.instantiate()</code> allocates the node tree, resolves the script, and
+registers the node with the scene tree on <code>add_child()</code>. Then, when you <code>queue_free()</code>,
+the node is destroyed at the end of the frame.</p>
+<p>For a handful of nodes this is nothing. The problem is not the average — it is the
+<strong>spike</strong>. Spawn forty enemies in one frame and that whole cost lands inside a single
+<code>_process</code>, which is exactly the moment the player is already looking at a busy screen.</p>
+<pre><code class="language-gdscript"># Fine for a door, a pickup, a boss.
+var bullet := BULLET.instantiate()
+bullet.global_position = muzzle.global_position
+add_child(bullet)
+</code></pre>
+<h2>What pooling actually costs</h2>
+<p>A pool trades allocation for bookkeeping: you create N objects up front, hand them out,
+and take them back. Frame time gets flat and boring — which is the whole point.</p>
+<pre><code class="language-gdscript">extends Node
+## Minimal pool. Pre-warms N instances, hands them out, takes them back.
+const SIZE := 128
+
+var _scene : PackedScene = preload(&quot;res://scenes/Bullet.tscn&quot;)
+var _free  : Array[Node] = []
+
+func _ready() -&gt; void:
+    for i in SIZE:
+        var n := _scene.instantiate()
+        n.set_process(false)
+        n.set_physics_process(false)
+        n.hide()
+        add_child(n)
+        _free.append(n)
+
+func take() -&gt; Node:
+    # Empty pool = fall back to a real instance. Never return null: a silent
+    # missing bullet is far harder to debug than one extra allocation.
+    var n : Node = _free.pop_back() if not _free.is_empty() else _scene.instantiate()
+    if n.get_parent() == null:
+        add_child(n)
+    n.show()
+    n.set_process(true)
+    n.set_physics_process(true)
+    return n
+
+func give_back(n: Node) -&gt; void:
+    if n == null or not is_instance_valid(n):
+        return
+    n.hide()
+    n.set_process(false)
+    n.set_physics_process(false)
+    _free.append(n)
+</code></pre>
+<p>The catch nobody mentions: a pooled object is <strong>never fresh</strong>. It keeps whatever state
+the last user left on it — velocity, timers, tween references, connected signals. That
+is where pooling bugs come from, and they are nasty because the object works the first
+time and misbehaves the fiftieth.</p>
+<p>Give every poolable object an explicit reset and call it in <code>take()</code>:</p>
+<pre><code class="language-gdscript">func reset() -&gt; void:
+    velocity = Vector2.ZERO
+    modulate = Color.WHITE
+    _lifetime = 0.0
+    set_deferred(&quot;monitoring&quot;, true)
+</code></pre>
+<h2>The comparison</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>instantiate()</code></th>
+<th>Pool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Code to maintain</td>
+<td>none</td>
+<td>pool + a <code>reset()</code> per object</td>
+</tr>
+<tr>
+<td>Frame time</td>
+<td>spiky on bursts</td>
+<td>flat</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>grows and shrinks</td>
+<td>fixed, reserved up front</td>
+</tr>
+<tr>
+<td>Bug class</td>
+<td>none of its own</td>
+<td>stale state carried between uses</td>
+</tr>
+<tr>
+<td>Startup</td>
+<td>instant</td>
+<td>pre-warm cost at load</td>
+</tr>
+<tr>
+<td>Good for</td>
+<td>doors, pickups, bosses, UI</td>
+<td>bullets, hordes, particles, damage numbers</td>
+</tr>
+</tbody>
+</table>
+<h2>The number that decides it</h2>
+<p>Do not guess. Open the profiler and look at <strong>frame time</strong>, not FPS — the average hides
+exactly the spike you care about.</p>
+<p>The rule of thumb that has held up for us: pool when you spawn and free <strong>more than
+about 20 objects per second, continuously</strong>. Below that, <code>instantiate()</code> is not your
+bottleneck and a pool is just extra surface for bugs.</p>
+<p>A bullet-heaven is the clearest case on the "pool it" side. Hundreds of projectiles,
+dozens of enemies and a damage number on every hit — all churning every single second
+for a fifteen-minute run. There, allocation is not a detail; it is the frame budget.</p>
+<p>A puzzle game spawning a tile every few seconds is the clearest case on the other side.
+Pooling it would be pure cost.</p>
+<h2>Prewarm, or your first wave stutters</h2>
+<p>If you build the pool inside <code>_ready()</code> of a scene the player is already looking at, you
+moved the spike instead of removing it. Build it during the loading screen, or spread it
+across frames with <code>await get_tree().process_frame</code> every N instances.</p>
+<h2>What we do in practice</h2>
+<p>Pool the things that repeat by the hundreds: projectiles, enemies, damage numbers, hit
+particles. Instantiate everything else. Two rules keep it from rotting — every poolable
+object owns a <code>reset()</code>, and the pool never returns null.</p>
+<p>If you are building a wave-based or bullet-heaven game, this pattern is not optional —
+it is the difference between a run that holds 60 FPS at minute twelve and one that does
+not.</p><div class="cta">Built this the long way once too many times. <b>Survivors Template</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/survivors-template-godot?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-object-pooling-vs-instantiate" data-product="Survivors Template" class="product-cta">https://saltmire.itch.io/survivors-template-godot</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
