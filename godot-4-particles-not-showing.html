@@ -1,0 +1,140 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>Godot 4 GPUParticles2D not showing? 5 reasons your particles aren&#x27;t appearing</title>
+<meta name="description" content="Your Godot 4 GPUParticles2D is in the scene but nothing shows up. Here are the 5 real causes — missing process material, culled visibility rect, one_shot traps, lifetime too short, and emitting left false — each with the exact fix.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-particles-not-showing.html">
+<meta property="og:type" content="article"><meta property="og:title" content="Godot 4 GPUParticles2D not showing? 5 reasons your particles aren&#x27;t appearing">
+<meta property="og:description" content="Your Godot 4 GPUParticles2D is in the scene but nothing shows up. Here are the 5 real causes — missing process material, culled visibility rect, one_shot traps, lifetime too short, and emitting left false — each with the exact fix."><meta property="og:url" content="https://saltmire.github.io/godot-4-particles-not-showing.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Godot 4 GPUParticles2D not showing? 5 reasons your particles aren't appearing","description":"Your Godot 4 GPUParticles2D is in the scene but nothing shows up. Here are the 5 real causes \u2014 missing process material, culled visibility rect, one_shot traps, lifetime too short, and emitting left false \u2014 each with the exact fix.","datePublished":"2026-08-02","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-particles-not-showing.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>Godot 4 GPUParticles2D not showing? 5 reasons your particles aren&#x27;t appearing</h1><time datetime="2026-08-02">2026-08-02</time><p>You added a <code>GPUParticles2D</code>, pressed Play, and the node is there in the tree — but
+zero particles appear. No error. Just silence. This is one of Godot 4's quietest
+failure modes because the engine never warns you when a particle system can't show
+anything. Work through these five causes in order; one of them is almost certainly it.</p>
+<h2>1. No process material assigned</h2>
+<p><strong>Symptom.</strong> Node is in the tree, the inspector shows <code>Process Material: [empty]</code>, no
+particles appear even though <code>emitting = true</code>.</p>
+<p><strong>Cause.</strong> <code>GPUParticles2D</code> without a <code>ParticleProcessMaterial</code> emits nothing and
+gives no error. It's easy to forget when you duplicate an existing node, detach the
+resource, or instantiate the node in code.</p>
+<p><strong>Fix.</strong> Always assign a material, even a default one:</p>
+<pre><code class="language-gdscript">var particles := GPUParticles2D.new()
+var mat := ParticleProcessMaterial.new()
+mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_POINT
+mat.initial_velocity_min = 50.0
+mat.initial_velocity_max = 100.0
+particles.process_material = mat
+add_child(particles)
+</code></pre>
+<p>If you're doing it in the editor, select the node, click the <code>Process Material</code>
+property in the Inspector, and pick <strong>New ParticleProcessMaterial</strong>.</p>
+<h2>2. <code>emitting</code> is false</h2>
+<p><strong>Symptom.</strong> Particles existed in a previous scene, you reset or duplicated the node,
+and now nothing comes out.</p>
+<p><strong>Cause.</strong> <code>emitting</code> defaults to <code>true</code> in a fresh node, but gets serialized on save.
+Resetting the scene, calling <code>queue_free()</code> and re-instantiating, or setting it false
+in an animation player and never restoring it will silence the emitter with no
+feedback.</p>
+<p><strong>Fix.</strong> If you're spawning a burst in code, make sure you set <code>emitting = true</code> after
+any other property setup:</p>
+<pre><code class="language-gdscript">func burst(pos: Vector2) -&gt; void:
+    var p: GPUParticles2D = BURST_SCENE.instantiate()
+    p.position = pos
+    p.emitting = true   # must be explicit — don't rely on the saved default
+    add_child(p)
+</code></pre>
+<p>And after a <code>one_shot</code> burst completes, <code>emitting</code> is automatically set back to
+<code>false</code> by the engine — this is correct behavior, not a bug. To replay the effect,
+call <code>restart()</code>:</p>
+<pre><code class="language-gdscript">particles.one_shot = true
+particles.restart()   # resets the timer and starts emitting again
+</code></pre>
+<h2>3. Visibility rect too small (particles culled)</h2>
+<p><strong>Symptom.</strong> Particles appear in the editor's 2D viewport but disappear at runtime,
+or only show near the center of the screen.</p>
+<p><strong>Cause.</strong> Godot 4 frustum-culls <code>GPUParticles2D</code> using the node's
+<code>visibility_rect</code>. The default is a tiny <code>Rect2(-100, -100, 200, 200)</code>. If particles
+travel outside that rect — especially for large explosions, projectile trails, or
+slow heavy particles — they vanish the moment the computed position leaves the box.</p>
+<p><strong>Fix.</strong> Fit the rect to your actual spread. You can ask Godot to estimate it for you:
+in the editor, select the node while it's emitting and press the <strong>Visibility Rect</strong>
+button in the toolbar to auto-calculate. In code, size it conservatively:</p>
+<pre><code class="language-gdscript"># a symmetric 512×512 box centred on the emitter — adjust to fit your spread:
+particles.visibility_rect = Rect2(-256, -256, 512, 512)
+</code></pre>
+<p>For very dynamic effects that change size at runtime, set it once to the maximum
+possible extent and leave it; the cost of a slightly oversized rect is negligible.</p>
+<h2>4. <code>lifetime</code> or <code>amount</code> are too small to see</h2>
+<p><strong>Symptom.</strong> A particle or two flickers for a frame and disappears.</p>
+<p><strong>Cause.</strong> The engine allocates exactly <code>amount</code> particles and recycles them as they
+die. If <code>lifetime</code> is <code>0.1</code> and <code>amount</code> is <code>4</code>, you get four particles that live for
+a tenth of a second and that's it. At 60 fps they're visible for ~6 frames — fast
+enough to read as a flicker or not register at all.</p>
+<p><strong>Fix.</strong> For a hit burst you actually want to see: <code>amount</code> of at least 8–12, and
+<code>lifetime</code> of 0.4–0.8 seconds. If it still looks sparse, also check <code>amount_ratio</code> —
+it scales the actual emission count between 0 and 1 and defaults to 1.0, but can be
+set to 0 by an animation.</p>
+<pre><code class="language-gdscript">particles.amount = 12
+particles.lifetime = 0.5
+particles.amount_ratio = 1.0  # full count; check this if amount looks right but few spawn
+</code></pre>
+<h2>5. The <code>one_shot</code> trap — particles fire once at scene load and stop</h2>
+<p><strong>Symptom.</strong> The burst works exactly once (at startup), then never again.</p>
+<p><strong>Cause.</strong> <code>one_shot = true</code> + <code>emitting = true</code> on scene load means the system fires
+immediately and marks itself done. The next time your code calls <code>emitting = true</code> on
+an already-exhausted one-shot system, nothing happens.</p>
+<p><strong>Fix.</strong> Start <code>one_shot</code> emitters with <code>emitting = false</code> and use <code>restart()</code> to fire
+them on demand. This guarantees a clean run each time:</p>
+<pre><code class="language-gdscript">@onready var particles := $HitParticles  # one_shot = true in the inspector
+
+func play_hit() -&gt; void:
+    particles.restart()   # safe to call even if already running — resets and re-emits
+</code></pre>
+<p><code>restart()</code> is the canonical way to trigger a <code>one_shot</code> effect from code; it also
+resets the randomization seed, so each burst looks fresh.</p>
+<h2>What all five have in common</h2>
+<p>Every one of these is a silent no-op: the node exists, no error is thrown, and you
+get nothing. The engine provides no warning when a particle system can't render, which
+is what makes these bugs hard to notice. If you want guaranteed visible bursts without
+wiring <code>GPUParticles2D</code> from scratch — process material, lifetime, amount, visibility
+rect and all — that's exactly what Saltmire Spark does with a single call.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Spark</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-spark?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-particles-not-showing" data-product="Saltmire Spark" class="product-cta">https://saltmire.itch.io/saltmire-spark</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
