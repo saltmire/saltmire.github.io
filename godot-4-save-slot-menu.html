@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>What I learned building a save-slot menu in Godot 4</title>
+<meta name="description" content="Lessons from building a multi-slot save menu in Godot 4 — thumbnail screenshots, corrupt-slot handling, the &quot;new game&quot; vs &quot;continue&quot; trap, and why a single save file always turns into three slots eventually.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-save-slot-menu.html">
+<meta property="og:type" content="article"><meta property="og:title" content="What I learned building a save-slot menu in Godot 4">
+<meta property="og:description" content="Lessons from building a multi-slot save menu in Godot 4 — thumbnail screenshots, corrupt-slot handling, the &quot;new game&quot; vs &quot;continue&quot; trap, and why a single save file always turns into three slots eventually."><meta property="og:url" content="https://saltmire.github.io/godot-4-save-slot-menu.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"What I learned building a save-slot menu in Godot 4","description":"Lessons from building a multi-slot save menu in Godot 4 \u2014 thumbnail screenshots, corrupt-slot handling, the \"new game\" vs \"continue\" trap, and why a single save file always turns into three slots eventually.","datePublished":"2026-08-10","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-save-slot-menu.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>What I learned building a save-slot menu in Godot 4</h1><time datetime="2026-08-10">2026-08-10</time><p>I built save/load for a project three separate times before I admitted the real work was
+never the file I/O. It was the menu. Here is what actually cost time, in the order it bit me.</p>
+<h2>Lesson 1: "one save file" always becomes "N save slots"</h2>
+<p>Every prototype starts with <code>user://save.dat</code> and a single Continue button. Then a
+playtester asks "can I have two characters going at once?" and the whole save layer has
+to grow a slot number it was never designed to carry.</p>
+<p>Design the path with a slot from day one, even if you ship with one slot:</p>
+<pre><code class="language-gdscript">func slot_path(slot: int) -&gt; String:
+    return &quot;user://save_slot_%d.json&quot; % slot
+</code></pre>
+<p>Retrofitting this later means migrating existing players' saves, which is lesson 4.</p>
+<h2>Lesson 2: the menu needs data the save file doesn't have yet</h2>
+<p>A save-slot screen wants to show a thumbnail, a play-time, a location name, and a
+timestamp — none of which live naturally inside your gameplay save data. I kept trying to
+derive them from the save file at load time, which meant loading every slot just to draw
+the menu. Slow, and it loads slots the player never picks.</p>
+<p>The fix is a tiny separate metadata blob written alongside the save, cheap to read for
+every slot up front:</p>
+<pre><code class="language-gdscript">func write_meta(slot: int, area_name: String, play_seconds: float) -&gt; void:
+    var meta := {
+        &quot;area&quot;: area_name,
+        &quot;play_seconds&quot;: play_seconds,
+        &quot;saved_at&quot;: Time.get_datetime_string_from_system(),
+        &quot;thumb&quot;: &quot;user://save_slot_%d.png&quot; % slot,
+    }
+    var f := FileAccess.open(&quot;user://save_slot_%d.meta.json&quot; % slot, FileAccess.WRITE)
+    f.store_string(JSON.stringify(meta))
+</code></pre>
+<p>The menu reads N small <code>.meta.json</code> files, not N full save files. Loading the actual slot
+only happens once the player commits to it.</p>
+<h2>Lesson 3: the thumbnail is a viewport capture, and timing matters</h2>
+<p>Grabbing a screenshot for the slot thumbnail is one call, but calling it at the wrong
+moment gives you a black square or a half-drawn frame:</p>
+<pre><code class="language-gdscript">func save_thumbnail(slot: int) -&gt; void:
+    await RenderingServer.frame_post_draw
+    var img := get_viewport().get_texture().get_image()
+    img.resize(320, 180)
+    img.save_png(&quot;user://save_slot_%d.png&quot; % slot)
+</code></pre>
+<p>Awaiting <code>frame_post_draw</code> instead of just calling it inline was the difference between a
+usable thumbnail and a black one — the viewport texture isn't guaranteed populated on the
+same frame you request the save.</p>
+<h2>Lesson 4: "new game" and "continue" are the same button, and that's the bug</h2>
+<p>I originally wired an empty slot to "New Game" and a filled slot to "Continue" as two
+different UI states. That is correct until a slot's save file gets corrupted — then the
+slot has data but nothing loads, and the player is stuck on a menu that offers no way
+forward. Every slot needs a fallback path from "load failed" back to "start over in this
+slot," not just a happy path:</p>
+<pre><code class="language-gdscript">func open_slot(slot: int) -&gt; void:
+    var result := SaveGame.load_slot(slot)
+    if result.ok:
+        start_game(result.data)
+    elif FileAccess.file_exists(slot_path(slot)):
+        show_corrupt_slot_dialog(slot)   # offer: retry, restore backup, or overwrite
+    else:
+        start_new_game(slot)
+</code></pre>
+<p>This is the one lesson I'd tell past-me to learn first — a corrupt slot isn't an edge
+case, it's a guarantee over a long enough playtest, and the menu is the only place a
+player can recover from it.</p>
+<h2>Lesson 5: deleting a slot needs a confirm, and needs to actually delete the metadata too</h2>
+<p>Obvious in hindsight, but I shipped a build where "delete slot" removed the save file and
+left the <code>.meta.json</code> and <code>.png</code> behind — so the empty slot still rendered a thumbnail and
+a play-time from the deleted run. Delete is three files, not one, or the slot lies to the
+player.</p>
+<h2>What I'd do differently starting over</h2>
+<p>Build the slot number and the metadata sidecar file on day one, even for a single-slot
+game — it costs nothing early and it is the exact thing that's expensive to retrofit.
+Treat "load failed" as a menu state you design for, not an exception you catch. And test
+delete by actually looking at the file list after, not just the menu.</p>
+<p>The mechanics of reading and writing JSON to <code>user://</code> are the easy 20% of "add saving" to
+a game. The slot menu, the corrupt-file recovery, and the thumbnail timing are the other
+80%, and none of it is specific to any one game — which is exactly the kind of thing worth
+not re-solving from scratch every project.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Save</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-save?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-save-slot-menu" data-product="Saltmire Save" class="product-cta">https://saltmire.itch.io/saltmire-save</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
