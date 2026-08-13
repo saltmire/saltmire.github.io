@@ -1,0 +1,170 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>How to add motion trails and afterimages in Godot 4</title>
+<meta name="description" content="A step-by-step Godot 4 tutorial for motion trails and dash afterimages — a sprite-snapshot scene, a configurable trail emitter, and tips for making them look great during fast movement.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-motion-trail-afterimage.html">
+<meta property="og:type" content="article"><meta property="og:title" content="How to add motion trails and afterimages in Godot 4">
+<meta property="og:description" content="A step-by-step Godot 4 tutorial for motion trails and dash afterimages — a sprite-snapshot scene, a configurable trail emitter, and tips for making them look great during fast movement."><meta property="og:url" content="https://saltmire.github.io/godot-4-motion-trail-afterimage.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to add motion trails and afterimages in Godot 4","description":"A step-by-step Godot 4 tutorial for motion trails and dash afterimages \u2014 a sprite-snapshot scene, a configurable trail emitter, and tips for making them look great during fast movement.","datePublished":"2026-08-13","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-motion-trail-afterimage.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>How to add motion trails and afterimages in Godot 4</h1><time datetime="2026-08-13">2026-08-13</time><p>Motion trails — those fading ghost copies left behind a dashing character — are one
+of the quickest wins for game feel. They make speed <em>readable</em> without any physics
+changes. Here's how to build one from scratch in Godot 4, then tips for turning it
+into a reusable component.</p>
+<h2>How it works</h2>
+<p>The idea is simple: every N milliseconds, take a snapshot of the character's current
+sprite frame and position, then fade that snapshot out. Stack several snapshots and
+you get a trail. No physics, no shaders required to start.</p>
+<h2>Step 1: the ghost scene</h2>
+<p>Create a new scene with a <code>Sprite2D</code> root. Name it <code>TrailGhost</code>. Give it this script:</p>
+<pre><code class="language-gdscript">class_name TrailGhost extends Sprite2D
+
+func play(tex: Texture2D, region: Rect2, use_region: bool,
+          at: Vector2, flipped_h: bool, alpha_start := 0.7,
+          duration := 0.25) -&gt; void:
+    texture = tex
+    region_rect = region
+    region_enabled = use_region
+    global_position = at
+    flip_h = flipped_h
+    modulate.a = alpha_start
+    var t := create_tween()
+    t.tween_property(self, &quot;modulate:a&quot;, 0.0, duration) \
+        .set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+    t.tween_callback(queue_free)
+</code></pre>
+<p>This ghost reads the source sprite's current frame data, drops itself at the right
+world position, and auto-destroys after fading. The <code>region_rect</code> copy is what makes
+the snapshot land on the correct animation frame rather than the whole spritesheet.</p>
+<h2>Step 2: the trail emitter</h2>
+<p>In your character scene, add a child <code>Node2D</code> called <code>Trail</code>. Give it this script,
+and export a reference to the character's <code>AnimatedSprite2D</code> (or <code>Sprite2D</code>):</p>
+<pre><code class="language-gdscript">extends Node2D
+
+@export var ghost_scene: PackedScene
+@export var source: AnimatedSprite2D
+@export var interval := 0.04          # seconds between ghosts
+@export var ghost_duration := 0.25
+@export var alpha_start := 0.65
+
+var _timer := 0.0
+var _active := false
+
+func activate() -&gt; void:  _active = true
+func deactivate() -&gt; void: _active = false
+
+func _process(delta: float) -&gt; void:
+    if not _active:
+        return
+    _timer += delta
+    if _timer &lt; interval:
+        return
+    _timer = 0.0
+    _spawn_ghost()
+
+func _spawn_ghost() -&gt; void:
+    if not source or not ghost_scene:
+        return
+    var g: TrailGhost = ghost_scene.instantiate()
+    get_tree().current_scene.add_child(g)   # world-space, not parented to character
+    var frames := source.sprite_frames
+    var anim := source.animation
+    var frame_idx := source.frame
+    var tex := frames.get_frame_texture(anim, frame_idx)
+    g.play(tex, Rect2(), false,
+           source.global_position, source.flip_h,
+           alpha_start, ghost_duration)
+</code></pre>
+<p>Adding the ghost to the <em>scene root</em> instead of the character means it stays at the
+right world position even when the character moves. If you parent it to the character,
+it follows along and the trail collapses.</p>
+<h2>Step 3: wire it to a dash</h2>
+<p>Call <code>activate()</code> and <code>deactivate()</code> around any movement where you want a trail.
+A typical dash looks like this in the character script:</p>
+<pre><code class="language-gdscript">func _dash() -&gt; void:
+    $Trail.activate()
+    var t := create_tween()
+    t.tween_property(self, &quot;velocity&quot;, dash_dir * dash_speed, 0.0)
+    await get_tree().create_timer(dash_duration).timeout
+    $Trail.deactivate()
+</code></pre>
+<p>For continuous speed-based trails (racing games, bullet hell), you can skip the
+manual toggle and drive it from speed instead:</p>
+<pre><code class="language-gdscript">func _process(delta: float) -&gt; void:
+    var spd := velocity.length()
+    if spd &gt; trail_threshold:
+        $Trail.activate()
+    else:
+        $Trail.deactivate()
+</code></pre>
+<h2>Step 4: make it look good</h2>
+<p>A few small tweaks make a big difference:</p>
+<p><strong>Interval vs duration ratio</strong> — if <code>interval</code> is close to <code>ghost_duration</code>, ghosts
+are sparse and the trail feels dotted. For a solid streak, keep <code>interval</code> at roughly
+one-sixth of <code>ghost_duration</code> (e.g. 0.04s / 0.25s).</p>
+<p><strong>Tint the ghosts</strong> — multiply <code>modulate</code> by a color before calling <code>play()</code>. Cyan
+works well for ice dashes; orange for fire. Set it on the <code>Trail</code> node as an export:</p>
+<pre><code class="language-gdscript">@export var tint := Color.WHITE
+
+# inside _spawn_ghost(), after g.play():
+g.modulate *= tint
+</code></pre>
+<p><strong>Z-index</strong> — give <code>TrailGhost</code> a lower <code>z_index</code> than the character (e.g. -1) so
+the trail sits <em>behind</em> the sprite, not on top of it.</p>
+<p><strong>Layer trails on AnimatedSprite2D frames</strong> — if your character uses a packed
+spritesheet with <code>region_enabled = true</code>, read <code>texture_region_rect</code> instead of
+<code>region_rect</code> and set <code>region_enabled = true</code> on the ghost. The script above leaves
+a <code>Rect2()</code> placeholder — swap it for <code>source.get_rect()</code> if your frames are
+packed that way.</p>
+<h2>When to pool</h2>
+<p><code>queue_free</code> is fine for short dashes where you spawn 5–10 ghosts per dash. Once
+you're emitting dozens per second — flying enemies, bullet patterns — the alloc
+pressure adds up. A small pool (pre-spawn 20 ghosts, hide/show rather than
+instantiate/free) keeps the frame time flat. The same pooling pattern from the
+damage-numbers post applies directly here.</p>
+<h2>The finished trail</h2>
+<p>That's the core: a self-destructing ghost scene, a timer-driven emitter, and an
+on/off signal tied to your movement logic. Tweak interval, duration, and tint per
+ability and you get a different personality for every dash in the game. If you'd
+rather drop in a single addon with pooling, color modes, and a one-call API already
+wired up, that's exactly what Saltmire Trail handles.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Trail</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-trail?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-motion-trail-afterimage" data-product="Saltmire Trail" class="product-cta">https://saltmire.itch.io/saltmire-trail</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
