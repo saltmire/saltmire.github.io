@@ -1,0 +1,173 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>5 Godot 4 sprite shader effects you can build in one script</title>
+<meta name="description" content="Dissolve, outline, hit-flash, freeze, and hologram — five Godot 4 canvas_item shader effects with copy-paste GDScript and .gdshader code for each.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-sprite-shader-effects.html">
+<meta property="og:type" content="article"><meta property="og:title" content="5 Godot 4 sprite shader effects you can build in one script">
+<meta property="og:description" content="Dissolve, outline, hit-flash, freeze, and hologram — five Godot 4 canvas_item shader effects with copy-paste GDScript and .gdshader code for each."><meta property="og:url" content="https://saltmire.github.io/godot-4-sprite-shader-effects.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"5 Godot 4 sprite shader effects you can build in one script","description":"Dissolve, outline, hit-flash, freeze, and hologram \u2014 five Godot 4 canvas_item shader effects with copy-paste GDScript and .gdshader code for each.","datePublished":"2026-08-16","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-sprite-shader-effects.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>5 Godot 4 sprite shader effects you can build in one script</h1><time datetime="2026-08-16">2026-08-16</time><p>A <code>Sprite2D</code> with a flat texture reads as static. A <code>Sprite2D</code> that can dissolve,
+outline, flash, freeze, or glow reads as <em>alive</em>. All five of those are small
+<code>canvas_item</code> shaders — no particles, no extra nodes, just a <code>ShaderMaterial</code> and a
+uniform you drive from a <code>Tween</code>. Here are five you can paste in today.</p>
+<h2>1. Dissolve</h2>
+<p>A noise texture decides, pixel by pixel, which parts of the sprite disappear first.
+Tween <code>threshold</code> from 0 to 1 and the sprite erodes away instead of just fading:</p>
+<pre><code class="language-glsl">// dissolve.gdshader
+shader_type canvas_item;
+uniform float threshold : hint_range(0.0, 1.0) = 0.0;
+uniform sampler2D noise : hint_default_white;
+
+void fragment() {
+    vec4 c = texture(TEXTURE, UV);
+    float n = texture(noise, UV).r;
+    if (n &lt; threshold) { discard; }
+    COLOR = c;
+}
+</code></pre>
+<pre><code class="language-gdscript">func dissolve(sprite: CanvasItem, duration := 0.6) -&gt; void:
+    var mat: ShaderMaterial = sprite.material
+    create_tween().tween_method(
+        func(v): mat.set_shader_parameter(&quot;threshold&quot;, v), 0.0, 1.0, duration)
+</code></pre>
+<p>Any seamless grayscale noise texture works for <code>noise</code> — a cheap Perlin or Worley
+texture gives you a very different silhouette than plain static.</p>
+<h2>2. Outline</h2>
+<p>Sample the alpha channel a few pixels in each direction; if the center pixel is
+transparent but a neighbor isn't, that pixel is edge:</p>
+<pre><code class="language-glsl">// outline.gdshader
+shader_type canvas_item;
+uniform vec4 outline_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+uniform float width : hint_range(0.0, 4.0) = 1.0;
+
+void fragment() {
+    vec4 c = texture(TEXTURE, UV);
+    vec2 px = width / vec2(textureSize(TEXTURE, 0));
+    float a = texture(TEXTURE, UV + vec2(px.x, 0)).a
+            + texture(TEXTURE, UV - vec2(px.x, 0)).a
+            + texture(TEXTURE, UV + vec2(0, px.y)).a
+            + texture(TEXTURE, UV - vec2(0, px.y)).a;
+    if (c.a &lt; 0.1 &amp;&amp; a &gt; 0.0) {
+        COLOR = outline_color;
+    } else {
+        COLOR = c;
+    }
+}
+</code></pre>
+<p>Toggle it from GDScript for a "targetable" or "selected" state:</p>
+<pre><code class="language-gdscript">func set_outlined(sprite: CanvasItem, on: bool) -&gt; void:
+    (sprite.material as ShaderMaterial).set_shader_parameter(&quot;width&quot;, 1.0 if on else 0.0)
+</code></pre>
+<p>Works on any sprite with transparent padding — no separate outline sprite to keep in
+sync.</p>
+<h2>3. Hit-flash</h2>
+<p>The fastest way to sell a hit: slam the sprite to solid white for a frame, then let
+it fade back. One uniform, one mix:</p>
+<pre><code class="language-glsl">// flash.gdshader
+shader_type canvas_item;
+uniform float amount : hint_range(0.0, 1.0) = 0.0;
+
+void fragment() {
+    vec4 c = texture(TEXTURE, UV);
+    COLOR = vec4(mix(c.rgb, vec3(1.0), amount), c.a);
+}
+</code></pre>
+<pre><code class="language-gdscript">func flash(sprite: CanvasItem, duration := 0.12) -&gt; void:
+    var mat: ShaderMaterial = sprite.material
+    mat.set_shader_parameter(&quot;amount&quot;, 1.0)
+    create_tween().tween_method(
+        func(v): mat.set_shader_parameter(&quot;amount&quot;, v), 1.0, 0.0, duration)
+</code></pre>
+<p>Fire this on every <code>take_damage()</code> call and hits instantly feel like they landed,
+even before a damage number or knockback shows up.</p>
+<h2>4. Freeze (grayscale + tint)</h2>
+<p>Desaturate the sprite and push it toward a cold blue — reads as "frozen" or
+"stunned" without swapping a single texture:</p>
+<pre><code class="language-glsl">// freeze.gdshader
+shader_type canvas_item;
+uniform float amount : hint_range(0.0, 1.0) = 0.0;
+uniform vec4 tint : source_color = vec4(0.6, 0.8, 1.0, 1.0);
+
+void fragment() {
+    vec4 c = texture(TEXTURE, UV);
+    float gray = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+    vec3 frozen = mix(vec3(gray), tint.rgb, 0.5);
+    COLOR = vec4(mix(c.rgb, frozen, amount), c.a);
+}
+</code></pre>
+<pre><code class="language-gdscript">func set_frozen(sprite: CanvasItem, frozen: bool, duration := 0.2) -&gt; void:
+    var mat: ShaderMaterial = sprite.material
+    create_tween().tween_method(
+        func(v): mat.set_shader_parameter(&quot;amount&quot;, v),
+        mat.get_shader_parameter(&quot;amount&quot;), 1.0 if frozen else 0.0, duration)
+</code></pre>
+<p>Pair it with <code>Engine.time_scale</code> on that one enemy (via a per-node "local slow"
+trick, since <code>time_scale</code> is global) and the freeze reads as more than cosmetic.</p>
+<h2>5. Hologram</h2>
+<p>Horizontal scanlines plus a fresnel-style rim glow, both driven by <code>TIME</code>, turns a
+flat sprite into a sci-fi projection:</p>
+<pre><code class="language-glsl">// hologram.gdshader
+shader_type canvas_item;
+uniform vec4 glow_color : source_color = vec4(0.3, 0.9, 1.0, 1.0);
+uniform float scan_speed : hint_range(0.0, 10.0) = 3.0;
+
+void fragment() {
+    vec4 c = texture(TEXTURE, UV);
+    float scan = sin((UV.y * 40.0) - TIME * scan_speed) * 0.5 + 0.5;
+    float rim = pow(1.0 - abs(UV.x - 0.5) * 2.0, 3.0);
+    vec3 col = mix(c.rgb, glow_color.rgb, 0.4 + rim * 0.3);
+    COLOR = vec4(col, c.a * (0.7 + scan * 0.3));
+}
+</code></pre>
+<p>No GDScript needed to drive this one — <code>TIME</code> animates it for free once the
+material is assigned. Just set <code>glow_color</code> per-sprite if you want factions or
+rarities to glow differently.</p>
+<h2>Wiring five shaders without five headaches</h2>
+<p>Individually each of these is one small <code>.gdshader</code> file and a couple of uniforms.
+The part that actually eats time is the plumbing: giving every sprite its own
+<code>ShaderMaterial</code> instance (share one and every dissolve syncs together, which is
+almost never what you want), keeping <code>amount</code>/<code>threshold</code> tweens from fighting
+each other when two effects fire on the same frame, and remembering which uniform
+name goes with which shader across a whole project. That bookkeeping is exactly
+what Saltmire FX collapses into a one-line call per effect.</p><div class="cta">Built this the long way once too many times. <b>Saltmire FX</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-fx?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-sprite-shader-effects" data-product="Saltmire FX" class="product-cta">https://saltmire.itch.io/saltmire-fx</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
