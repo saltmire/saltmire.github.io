@@ -1,0 +1,151 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>Godot 4 &#x27;signal already connected&#x27; — why it happens and how to fix it</title>
+<meta name="description" content="Your Godot 4 script throws &quot;Signal is already connected&quot; at runtime. Here are the 4 real causes — reconnecting on scene reload, connect inside a loop, shared targets with multiple instances, and wrong disconnect patterns — each with the exact fix.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-signal-already-connected.html">
+<meta property="og:type" content="article"><meta property="og:title" content="Godot 4 &#x27;signal already connected&#x27; — why it happens and how to fix it">
+<meta property="og:description" content="Your Godot 4 script throws &quot;Signal is already connected&quot; at runtime. Here are the 4 real causes — reconnecting on scene reload, connect inside a loop, shared targets with multiple instances, and wrong disconnect patterns — each with the exact fix."><meta property="og:url" content="https://saltmire.github.io/godot-4-signal-already-connected.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Godot 4 'signal already connected' \u2014 why it happens and how to fix it","description":"Your Godot 4 script throws \"Signal is already connected\" at runtime. Here are the 4 real causes \u2014 reconnecting on scene reload, connect inside a loop, shared targets with multiple instances, and wrong disconnect patterns \u2014 each with the exact fix.","datePublished":"2026-08-18","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-signal-already-connected.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>Godot 4 &#x27;signal already connected&#x27; — why it happens and how to fix it</h1><time datetime="2026-08-18">2026-08-18</time><p>Your game is running, something triggers, and Godot prints a wall of red to the Output
+panel:</p>
+<pre><code>E 0:00:01.887  _ready(): Signal 'area_entered' is already connected to a callable 'Enemy._on_hit'.
+</code></pre>
+<p>The signal usually still fires — but now every connected callback runs <em>twice</em>, so you get
+double damage, duplicate score increments, and bugs that only appear after a few game
+cycles. Here are the four causes, ordered by how often they bite.</p>
+<h2>1. <code>connect()</code> is called in <code>_ready()</code> and the node is freed and reinstantiated</h2>
+<p><strong>Symptom.</strong> The first run works fine. After the player dies and the scene reloads, the
+error appears on the second play-through.</p>
+<p><strong>Cause.</strong> When a node is freed and a new instance enters the tree, <code>_ready()</code> runs again.
+If you connected a signal to a long-lived object — an autoload, the HUD, a game manager
+— that object still holds the connection from the previous instance. A second <code>connect()</code>
+stacks a second listener on top.</p>
+<p><strong>Fix.</strong> Guard with <code>is_connected()</code> or disconnect explicitly in <code>_exit_tree()</code>:</p>
+<pre><code class="language-gdscript">func _ready() -&gt; void:
+    if not hitbox.area_entered.is_connected(_on_hit):
+        hitbox.area_entered.connect(_on_hit)
+
+func _exit_tree() -&gt; void:
+    if hitbox.area_entered.is_connected(_on_hit):
+        hitbox.area_entered.disconnect(_on_hit)
+</code></pre>
+<p>If the connection should only fire once (a pickup, a trigger zone), use the
+<code>CONNECT_ONE_SHOT</code> flag instead — Godot disconnects it automatically after one fire:</p>
+<pre><code class="language-gdscript">zone.body_entered.connect(_on_player_enter, CONNECT_ONE_SHOT)
+</code></pre>
+<h2>2. <code>connect()</code> is called inside a loop or a function that runs every frame</h2>
+<p><strong>Symptom.</strong> The error prints once per frame (or once per loop iteration), and the
+callback runs n times more than expected.</p>
+<p><strong>Cause.</strong> Putting <code>connect()</code> inside <code>_process()</code>, <code>_physics_process()</code>, or a <code>for</code> loop
+that iterates over live nodes calls it on every tick or every element. Godot allows
+duplicate connections by default; each call stacks another listener.</p>
+<p><strong>Fix.</strong> Move <code>connect()</code> to <code>_ready()</code> or <code>_enter_tree()</code> — run it once, not repeatedly:</p>
+<pre><code class="language-gdscript"># WRONG — connects every physics frame:
+func _physics_process(_delta: float) -&gt; void:
+    for area in get_overlapping_areas():
+        area.damaged.connect(_take_damage)
+
+# RIGHT — connects once when the node is ready:
+func _ready() -&gt; void:
+    for child in get_children():
+        if child.has_signal(&quot;damaged&quot;):
+            child.damaged.connect(_take_damage)
+</code></pre>
+<h2>3. Multiple instances all connect to the same shared target</h2>
+<p><strong>Symptom.</strong> One enemy works correctly. Spawn three enemies and every hit triggers the
+callback three times — or three times on each of the three enemies.</p>
+<p><strong>Cause.</strong> Each instance calls <code>connect()</code> on the same shared node (an autoload or a
+global HUD). Three instances × one <code>connect()</code> each = three listeners. When the signal
+fires, all three run.</p>
+<p><strong>Fix.</strong> Connect signals to <code>self</code> (the instance that owns them), not to a shared target:</p>
+<pre><code class="language-gdscript"># each Enemy connects its own hitbox to its own method — no collision:
+func _ready() -&gt; void:
+    hitbox.area_entered.connect(_on_hit)
+
+func _on_hit(area: Area2D) -&gt; void:
+    take_damage(area.damage)
+</code></pre>
+<p>If you need a central listener, let the manager <em>register</em> instances and call their methods
+directly instead of stacking signal connections:</p>
+<pre><code class="language-gdscript"># GameManager.gd
+var enemies: Array[Enemy] = []
+
+func register(e: Enemy) -&gt; void:
+    enemies.append(e)
+    # no connect() here — call e.take_damage() directly when needed
+</code></pre>
+<h2>4. Using <code>disconnect()</code> with the wrong callable reference</h2>
+<p><strong>Symptom.</strong> You call <code>disconnect()</code> before <code>connect()</code> to get a clean slate, but the
+error still appears. Or <code>disconnect()</code> prints "Signal not connected" even though you just
+connected it.</p>
+<p><strong>Cause.</strong> In Godot 4, a <code>Callable</code> is matched by both the bound object and the method
+name. A new lambda is a <em>different</em> <code>Callable</code> object even if the body is identical —
+<code>disconnect()</code> can't find it and does nothing, leaving the old listener in place.</p>
+<pre><code class="language-gdscript"># WRONG — two different Callable objects; disconnect() fails silently:
+signal.connect(func(): _handle_hit())
+signal.disconnect(func(): _handle_hit())  # not found — old listener stays
+</code></pre>
+<p><strong>Fix.</strong> Store the callable in a variable and reuse the same reference for both calls:</p>
+<pre><code class="language-gdscript">var _hit_callable: Callable
+
+func _ready() -&gt; void:
+    _hit_callable = _on_hit          # store the bound method
+    hitbox.area_entered.connect(_hit_callable)
+
+func _exit_tree() -&gt; void:
+    if hitbox.area_entered.is_connected(_hit_callable):
+        hitbox.area_entered.disconnect(_hit_callable)
+</code></pre>
+<p>Named methods (<code>_on_hit</code>, not lambdas) are the safest choice for connections you need
+to remove later.</p>
+<h2>What all four have in common</h2>
+<p>Every case is the same root problem: <code>connect()</code> was called more than once for the same
+(signal, callable) pair. Godot 4 doesn't deduplicate connections by default — each extra
+call adds another listener, and every listener fires when the signal emits.</p>
+<p>The safe pattern is always: connect once in <code>_ready()</code> or <code>_enter_tree()</code>, disconnect
+explicitly in <code>_exit_tree()</code>, and guard with <code>is_connected()</code> when the timing is
+uncertain. If you'd rather skip wiring <code>Area2D</code> signals for combat altogether — and
+avoid this entire class of bug — that's what Saltmire Hitbox handles internally:
+<code>Hitbox2D</code> manages its own connections and tears them down automatically when the node
+leaves the tree.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Hitbox</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-hitbox?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-signal-already-connected" data-product="Saltmire Hitbox" class="product-cta">https://saltmire.itch.io/saltmire-hitbox</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>
