@@ -1,0 +1,189 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>RigidBody2D vs CharacterBody2D for knockback in Godot 4 — which and when</title>
+<meta name="description" content="A practical Godot 4 comparison for implementing hit knockback — when to fake it on a CharacterBody2D, when to reach for a real RigidBody2D, and the hybrid trick most shipped games actually use.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-knockback-rigidbody-vs-characterbody.html">
+<meta property="og:type" content="article"><meta property="og:title" content="RigidBody2D vs CharacterBody2D for knockback in Godot 4 — which and when">
+<meta property="og:description" content="A practical Godot 4 comparison for implementing hit knockback — when to fake it on a CharacterBody2D, when to reach for a real RigidBody2D, and the hybrid trick most shipped games actually use."><meta property="og:url" content="https://saltmire.github.io/godot-4-knockback-rigidbody-vs-characterbody.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"RigidBody2D vs CharacterBody2D for knockback in Godot 4 \u2014 which and when","description":"A practical Godot 4 comparison for implementing hit knockback \u2014 when to fake it on a CharacterBody2D, when to reach for a real RigidBody2D, and the hybrid trick most shipped games actually use.","datePublished":"2026-08-20","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-knockback-rigidbody-vs-characterbody.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>RigidBody2D vs CharacterBody2D for knockback in Godot 4 — which and when</h1><time datetime="2026-08-20">2026-08-20</time><p>Every combat game needs knockback, and every combat game asks the same question at
+some point: should the thing that just got hit be a <code>RigidBody2D</code>, or should you fake
+the shove on the <code>CharacterBody2D</code> you already have? Both work. They fail in different
+ways, and picking the wrong one costs you a rewrite mid-project.</p>
+<h2>The CharacterBody2D approach: a velocity you decay</h2>
+<p>Most character controllers in Godot 4 are already <code>CharacterBody2D</code>, driven by
+<code>move_and_slide()</code>. Knockback here means adding a temporary velocity on top of the
+normal movement input and letting it bleed off over a few frames.</p>
+<pre><code class="language-gdscript">extends CharacterBody2D
+
+var knockback := Vector2.ZERO
+const KNOCKBACK_FRICTION := 900.0
+
+func apply_knockback(direction: Vector2, force: float) -&gt; void:
+    knockback = direction.normalized() * force
+
+func _physics_process(delta: float) -&gt; void:
+    var input_velocity := get_input_velocity() # your normal movement code
+
+    knockback = knockback.move_toward(Vector2.ZERO, KNOCKBACK_FRICTION * delta)
+
+    velocity = input_velocity + knockback
+    move_and_slide()
+</code></pre>
+<p>This is cheap, deterministic, and stays inside <code>move_and_slide()</code>'s collision rules —
+the body still slides along walls correctly while it's being pushed. The catch: it is
+entirely your own simulation. There is no real physics response, so two bodies pushed
+into each other don't interact, and the "weight" of a hit is whatever curve you hand-tune
+into <code>KNOCKBACK_FRICTION</code>.</p>
+<h2>The RigidBody2D approach: apply_impulse and let physics do it</h2>
+<p>A <code>RigidBody2D</code> gives you a real physics body — mass, impulses, collision response
+between bodies for free.</p>
+<pre><code class="language-gdscript">extends RigidBody2D
+
+func apply_knockback(direction: Vector2, force: float) -&gt; void:
+    apply_impulse(direction.normalized() * force)
+</code></pre>
+<p>That's the whole function. The physics engine handles the deceleration (via
+<code>linear_damp</code>), the collisions with other rigid bodies, and bodies piling into each
+other look and feel physical because they <em>are</em> physical. The catch: <code>RigidBody2D</code>
+doesn't give you <code>move_and_slide()</code>-style character control. If your enemy or player
+also needs precise, responsive movement input, you're now fighting the physics engine
+for control of the same body, and that fight usually shows up as jitter against walls
+or a character that "floats" a frame after landing.</p>
+<h2>The comparison</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>CharacterBody2D (faked)</th>
+<th>RigidBody2D (real)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Setup cost</td>
+<td>one velocity field + <code>move_toward</code></td>
+<td><code>apply_impulse</code> and done</td>
+</tr>
+<tr>
+<td>Feel</td>
+<td>fully tunable, but hand-rolled</td>
+<td>physically consistent, less tunable</td>
+</tr>
+<tr>
+<td>Body-to-body interaction</td>
+<td>none — you'd have to script it</td>
+<td>free, physics engine handles it</td>
+</tr>
+<tr>
+<td>Movement input while knocked back</td>
+<td>trivial to blend</td>
+<td>fights the physics solver</td>
+</tr>
+<tr>
+<td>Determinism</td>
+<td>yes</td>
+<td>mostly, minor solver variance</td>
+</tr>
+<tr>
+<td>Good for</td>
+<td>player character, most enemies</td>
+<td>ragdolls, debris, crowds, destructibles</td>
+</tr>
+</tbody>
+</table>
+<h2>The hybrid most shipped games actually use</h2>
+<p>The honest answer is that neither option alone covers a whole game. The pattern that
+holds up: keep your player and most enemies on <code>CharacterBody2D</code> with faked knockback,
+because you need tight control over their movement every single frame. Switch to
+<code>RigidBody2D</code> only for things that are <em>allowed</em> to lose control entirely — a dead
+enemy's ragdoll, a barrel that goes flying, loose debris in a destructible wall.</p>
+<p>A trick that gets you most of the RigidBody feel without giving up control: keep the
+<code>CharacterBody2D</code>, but scale the knockback force by the target's own "weight" stat and
+add a short window where player input is ignored so the hit actually reads:</p>
+<pre><code class="language-gdscript">var knockback_lock_timer := 0.0
+
+func apply_knockback(direction: Vector2, force: float, weight: float = 1.0) -&gt; void:
+    knockback = direction.normalized() * (force / max(weight, 0.1))
+    knockback_lock_timer = 0.12  # player input ignored for ~2 hit-stop frames
+
+func _physics_process(delta: float) -&gt; void:
+    knockback_lock_timer = max(knockback_lock_timer - delta, 0.0)
+    var input_velocity := Vector2.ZERO if knockback_lock_timer &gt; 0.0 else get_input_velocity()
+
+    knockback = knockback.move_toward(Vector2.ZERO, KNOCKBACK_FRICTION * delta)
+    velocity = input_velocity + knockback
+    move_and_slide()
+</code></pre>
+<p>That <code>weight</code> parameter is the part people skip and then wonder why every enemy flies
+the same distance regardless of size.</p>
+<h2>The number that actually decides it</h2>
+<p>If the object needs to respond to player input on the same frame it's simulating physics,
+it's a <code>CharacterBody2D</code> with faked knockback — no exceptions, because fighting the
+physics solver for input responsiveness is a losing, ongoing cost. If the object never
+takes player input again after the hit (a corpse, debris, a thrown prop), it's a
+<code>RigidBody2D</code> and you get the physics for free.</p>
+<p>Wiring this up by hand means a <code>direction</code>, a <code>force</code>, a <code>weight</code>, teams so you don't
+knock back your own allies, and i-frames so one hit doesn't chain into five — all before
+you've written a single line of actual combat design. Saltmire Hitbox ships that whole
+layer as a drop-in Hitbox2D / Hurtbox2D pair, knockback included, so the comparison
+above is a five-minute decision instead of a rewrite.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Hitbox</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-hitbox?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-knockback-rigidbody-vs-characterbody" data-product="Saltmire Hitbox" class="product-cta">https://saltmire.itch.io/saltmire-hitbox</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>

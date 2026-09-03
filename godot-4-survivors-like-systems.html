@@ -1,0 +1,187 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>What a survivors-like actually needs in Godot 4 — and what you can skip</title>
+<meta name="description" content="The five systems that decide whether a Vampire Survivors-like in Godot 4 ships or stalls — data-driven waves, enemy count, the upgrade draft, honest damage, and meta progression — with the code for each and an honest note on what you can leave out.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-survivors-like-systems.html">
+<meta property="og:type" content="article"><meta property="og:title" content="What a survivors-like actually needs in Godot 4 — and what you can skip">
+<meta property="og:description" content="The five systems that decide whether a Vampire Survivors-like in Godot 4 ships or stalls — data-driven waves, enemy count, the upgrade draft, honest damage, and meta progression — with the code for each and an honest note on what you can leave out."><meta property="og:url" content="https://saltmire.github.io/godot-4-survivors-like-systems.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"What a survivors-like actually needs in Godot 4 \u2014 and what you can skip","description":"The five systems that decide whether a Vampire Survivors-like in Godot 4 ships or stalls \u2014 data-driven waves, enemy count, the upgrade draft, honest damage, and meta progression \u2014 with the code for each and an honest note on what you can leave out.","datePublished":"2026-09-03","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-survivors-like-systems.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>What a survivors-like actually needs in Godot 4 — and what you can skip</h1><time datetime="2026-09-03">2026-09-03</time><p>A survivors-like looks like the easiest genre to build. The player moves, the weapons
+fire themselves, the enemies walk straight at you. You can have that on screen in a
+weekend, and most people do.</p>
+<p>Then it stalls. Not because the loop is hard, but because the five systems <em>around</em>
+the loop are where the whole genre actually lives. Here is what each one has to do,
+what it costs you, and the two things everybody builds that they did not need.</p>
+<h2>1. Waves have to be data, not code</h2>
+<p>The first version is always a <code>Timer</code> and a <code>spawn_enemy()</code> that gets an <code>if</code> added to
+it every session. By hour ten it is a wall of conditionals nobody can tune.</p>
+<p>The fix is not clever, it is just early: waves are a resource you edit, not a function
+you extend.</p>
+<pre><code class="language-gdscript">class_name Wave
+extends Resource
+
+@export var enemy: PackedScene
+@export var starts_at: float = 0.0     ## seconds into the run
+@export var ends_at: float = 60.0
+@export var per_second: float = 2.0
+@export var hp_mult: float = 1.0
+</code></pre>
+<pre><code class="language-gdscript">func _process(delta: float) -&gt; void:
+    _t += delta
+    for wave in waves:
+        if _t &lt; wave.starts_at or _t &gt; wave.ends_at:
+            continue
+        _budget[wave] = _budget.get(wave, 0.0) + wave.per_second * delta
+        while _budget[wave] &gt;= 1.0:
+            _budget[wave] -= 1.0
+            _spawn(wave)
+</code></pre>
+<p>The accumulator matters more than it looks. Spawning on a <code>Timer</code> ties your difficulty
+curve to frame rate and to timer granularity; accumulating a float budget lets you say
+"2.4 enemies per second" and actually get it.</p>
+<p>Once waves are resources, balancing stops being programming. That is the whole point —
+you will re-tune this a hundred times before release.</p>
+<h2>2. Enemy count is the thing that breaks first</h2>
+<p>The genre's entire fantasy is <em>too many of them</em>. That means the first wall you hit is
+not AI, it is allocation: three hundred enemies spawning and dying every few seconds.</p>
+<p>Two decisions carry almost all of it:</p>
+<ul>
+<li><strong>Pool the enemies and the bullets.</strong> Not because allocation is slow on average, but
+  because the spike lands in one frame, exactly when the screen is busiest. I wrote the
+  honest version of this trade-off in
+  <a href="https://saltmire.github.io/godot-4-object-pooling-vs-instantiate.html">object pooling vs instantiate</a> —
+  including when pooling is a waste of your time.</li>
+<li><strong>Do not give each enemy a <code>_process</code>.</strong> Three hundred script callbacks per frame is
+  real cost for behaviour that is "walk toward the player". Move them from one manager
+  loop over a packed array of positions, and let the node be a dumb sprite.</li>
+</ul>
+<h2>3. The upgrade draft is the actual game</h2>
+<p>Movement is the verb, but the reason people replay is the level-up screen. Three cards,
+one choice, a build that compounds. That system needs to be data from the first day,
+because you are going to write eighty of these.</p>
+<pre><code class="language-gdscript">class_name Upgrade
+extends Resource
+
+@export var id: StringName
+@export var title: String
+@export var max_stacks: int = 5
+@export var weight: float = 1.0
+@export var requires: Array[StringName] = []   ## unlocks that must exist first
+</code></pre>
+<pre><code class="language-gdscript">func draft(count: int = 3) -&gt; Array[Upgrade]:
+    var pool := all.filter(func(u): return _eligible(u))
+    var picks: Array[Upgrade] = []
+    var total := 0.0
+    for u in pool:
+        total += u.weight
+    while picks.size() &lt; count and not pool.is_empty():
+        var roll := randf() * total
+        for u in pool:
+            roll -= u.weight
+            if roll &lt;= 0.0:
+                picks.append(u)
+                total -= u.weight
+                pool.erase(u)
+                break
+    return picks
+</code></pre>
+<p>Weighted, filtered by what the player already owns, drawn without replacement. That is
+the whole engine. Everything else is content you can write on a bad day.</p>
+<h2>4. Damage has to be honest</h2>
+<p>With hundreds of overlapping bodies, the bugs stop being visual and start being unfair:
+a hit that lands twice in one swing, a hit that fires a damage number for a target that
+was invincible, knockback that reads as a teleport.</p>
+<p>The three rules that fix nearly all of it:</p>
+<ul>
+<li><strong>One hit per swing.</strong> A lingering hitbox must not drain a target every frame.</li>
+<li><strong>Invincibility frames on the receiver</strong>, not the attacker.</li>
+<li><strong>The hit event fires only when damage was actually taken.</strong> If the target was in
+  i-frames, no number, no spark, no sound. Nothing is more confusing than feedback for
+  a hit that did not happen.</li>
+</ul>
+<p>If you are wiring this from scratch, the layer/mask half of it is covered in
+<a href="https://saltmire.github.io/godot-4-hitbox-hurtbox.html">hitbox and hurtbox the easy way</a>.</p>
+<h2>5. Meta progression decides whether run two happens</h2>
+<p>This is the one everybody bolts on last. It is also the one that turns a demo into a
+game, because it is the reason to press "again" after dying at minute nine.</p>
+<p>It does not need to be big. Currency earned per run, a handful of permanent unlocks,
+and a save file that survives a crash mid-run. What it does need is to exist <em>before</em>
+you tune difficulty, because permanent upgrades change every balance number you already
+set.</p>
+<h2>What you can skip</h2>
+<ul>
+<li><strong>Pathfinding.</strong> Enemies walk at the player. A steering vector and a cheap separation
+  push between neighbours looks better than A* here, and costs a fraction.</li>
+<li><strong>Per-enemy AI scripts.</strong> One state and a speed value covers ninety percent of the
+  roster. Save the scripting for the three enemies that actually do something.</li>
+</ul>
+<h2>Build it or start from one</h2>
+<p>If you want to learn the genre, build it. All five systems above are honest work and
+none of them is beyond a solo dev — that is why the write-up exists.</p>
+<p>If you want to ship, the argument for starting from a template is that the five systems
+above are the ones you would spend a month getting wrong first. The
+<a href="https://saltmire.itch.io/survivors-template-godot">Survivors Template</a> is the
+data-driven version of exactly this — waves, draft, pooling and meta progression already
+wired, with the full source and a playable web demo so you can judge the feel before
+paying anything.</p>
+<p>The rest of the tools I use for the combat and feel layer are on the
+<a href="https://saltmire.github.io/tools.html">tools page</a>, most of them free and MIT.</p><div class="cta">Built this the long way once too many times. <b>Survivors Template</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/survivors-template-godot?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-survivors-like-systems" data-product="Survivors Template" class="product-cta">https://saltmire.itch.io/survivors-template-godot</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div></body></html>

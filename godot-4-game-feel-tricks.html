@@ -36,12 +36,30 @@ border-left:3px solid var(--accent);border-radius:8px}
 .post-list a.title{font-size:19px;color:#fff;font-weight:600}
 .post-list p{color:var(--muted);margin:.4em 0 0}
 footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"6 Godot 4 game feel tricks (each just a few lines of GDScript)","description":"Squash-and-stretch, sprite flash, damage numbers, knockback, slow-motion and a camera punch \u2014 six drop-in Godot 4 game feel techniques with copy-paste GDScript.","datePublished":"2026-07-18","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-game-feel-tricks.html"}</script>
 </head><body><div class="wrap">
 <header class="site"><div class="brand">Saltmire</div>
 <div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
-<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.itch.io">Tools &amp; templates</a>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
 <a href="https://github.com/saltmire">GitHub</a></nav></header><main>
 <article><h1>6 Godot 4 game feel tricks (each just a few lines of GDScript)</h1><time datetime="2026-07-18">2026-07-18</time><p>"Game feel" is the difference between a hit that just subtracts HP and a hit that
 <em>lands</em>. In Godot 4 almost none of it needs plugins — it's small, cheap touches

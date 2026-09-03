@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>https://saltmire.github.io/</loc></url>
+<url><loc>https://saltmire.github.io/godot-4-survivors-like-systems.html</loc></url>
+<url><loc>https://saltmire.github.io/godot-4-knockback-rigidbody-vs-characterbody.html</loc></url>
 <url><loc>https://saltmire.github.io/godot-4-signal-already-connected.html</loc></url>
 <url><loc>https://saltmire.github.io/godot-4-sprite-shader-effects.html</loc></url>
 <url><loc>https://saltmire.github.io/godot-4-motion-trail-afterimage.html</loc></url>
@@ -16,4 +18,5 @@
 <url><loc>https://saltmire.github.io/godot-4-scene-transitions.html</loc></url>
 <url><loc>https://saltmire.github.io/godot-4-save-load.html</loc></url>
 <url><loc>https://saltmire.github.io/godot-4-screen-shake-hit-stop.html</loc></url>
+<url><loc>https://saltmire.github.io/tools.html</loc></url>
 </urlset>

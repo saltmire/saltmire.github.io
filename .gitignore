@@ -9,3 +9,7 @@ __pycache__/
 *_token.txt
 *_creds.json
 .env
+
+# Backups de script (.bak_*). Esta pasta E a raiz do site publicado: um build.py.bak
+# aqui fica acessivel publicamente e polui o repo. Criados em 03/09/2026.
+*.bak_*
