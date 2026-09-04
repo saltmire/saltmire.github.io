@@ -166,14 +166,36 @@ def escape_json(s):
 # pagina nunca discordar da loja. So os textos ficam aqui, porque sao copy.
 DATA_JS = os.path.join(HERE, "..", "dashboard", "data.js")
 
+# "ends" nao e decorativo: a promocao de lancamento venceu em 01/08/2026 e a pagina
+# seguiu anunciando $19.80 por 34 dias, mandando as visitas de maior intencao para uma
+# oferta morta. Sem data, so uma pessoa lembrando impede isso -- e ninguem lembrou.
 BUNDLE = {
     "url": "https://itch.io/s/196174/saltmire-complete-launch-bundle",
     "name": "Saltmire Complete \u2014 Launch Bundle",
     "price": 19.80,
     "full": 31.96,
+    "ends": "2026-08-01",
     "blurb": "All four paid tools in one purchase: Survivors Template, Impact, "
              "Hitbox and Save.",
 }
+
+
+def bundle_html():
+    """Bloco da promocao -- vazio (e avisando) depois da data de fim."""
+    if datetime.date.today().isoformat() >= BUNDLE["ends"]:
+        print("aviso: promocao do bundle venceu em {} -- bloco omitido de tools.html"
+              .format(BUNDLE["ends"]))
+        return ""
+    off = round((1 - BUNDLE["price"] / BUNDLE["full"]) * 100)
+    return (
+        '<div class="bundle"><div><b>{}</b></div>'.format(html.escape(BUNDLE["name"])) +
+        '<p class="blurb">{}</p>'.format(html.escape(BUNDLE["blurb"])) +
+        '<span class="now">${:.2f}</span>'.format(BUNDLE["price"]) +
+        '<span class="was">${:.2f}</span>'.format(BUNDLE["full"]) +
+        '<span class="off">save {}% \u2014 ${:.2f} per tool</span> &nbsp; '.format(
+            off, BUNDLE["price"] / 4) +
+        '<a href="{}">Get the bundle</a></div>'.format(
+            utm(BUNDLE["url"], "complete-bundle", medium="tools")))
 
 GODOT_VERSION = "4.6"   # de config/features nos project.godot dos addons
 
@@ -294,20 +316,12 @@ def build_tools(products, posts):
                    if not pr["paid"] and pr["slug"] not in lite_slugs],
                   key=lambda pr: -pr.get("views", 0))
 
-    off = round((1 - BUNDLE["price"] / BUNDLE["full"]) * 100)
-    each = BUNDLE["price"] / 4
     body = (
         "<h1>Godot 4 tools &amp; templates</h1>"
         "<p>Small, drop-in addons for Godot 4. Every paid tool has a free version, "
         "so you can try the approach before paying for anything.</p>"
         '<p class="compat">Godot {} \u00b7 full source included \u00b7 MIT free versions</p>'.format(GODOT_VERSION) +
-        '<div class="bundle"><div><b>{}</b></div>'.format(html.escape(BUNDLE["name"])) +
-        '<p class="blurb">{}</p>'.format(html.escape(BUNDLE["blurb"])) +
-        '<span class="now">${:.2f}</span>'.format(BUNDLE["price"]) +
-        '<span class="was">${:.2f}</span>'.format(BUNDLE["full"]) +
-        '<span class="off">save {}% \u2014 ${:.2f} per tool</span> &nbsp; '.format(off, each) +
-        '<a href="{}">Get the bundle</a></div>'.format(
-            utm(BUNDLE["url"], "complete-bundle", medium="tools")) +
+        bundle_html() +
         "<h2>Paid tools</h2>" +
         '<ul class="tools">{}</ul>'.format(
             "".join(tool_row(pr, by_slug) for pr in paid)) +
