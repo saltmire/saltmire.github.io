@@ -1,0 +1,160 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>Godot 4 camera shake not working right? 4 causes and fixes</title>
+<meta name="description" content="Your Godot 4 camera shake barely moves, snaps back instantly, or drifts permanently off-center. Here are the 4 real causes — shaking position instead of offset, overlapping shakes fighting each other, offset never getting reset, and frame-rate-dependent decay — each with the exact fix.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-camera-shake-not-working.html">
+<meta property="og:type" content="article"><meta property="og:title" content="Godot 4 camera shake not working right? 4 causes and fixes">
+<meta property="og:description" content="Your Godot 4 camera shake barely moves, snaps back instantly, or drifts permanently off-center. Here are the 4 real causes — shaking position instead of offset, overlapping shakes fighting each other, offset never getting reset, and frame-rate-dependent decay — each with the exact fix."><meta property="og:url" content="https://saltmire.github.io/godot-4-camera-shake-not-working.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Godot 4 camera shake not working right? 4 causes and fixes","description":"Your Godot 4 camera shake barely moves, snaps back instantly, or drifts permanently off-center. Here are the 4 real causes \u2014 shaking position instead of offset, overlapping shakes fighting each other, offset never getting reset, and frame-rate-dependent decay \u2014 each with the exact fix.","datePublished":"2026-09-07","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-camera-shake-not-working.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>Godot 4 camera shake not working right? 4 causes and fixes</h1><time datetime="2026-09-07">2026-09-07</time><p>You wire up a quick camera shake for hits, and something's off. Either it barely
+registers, it snaps back the instant it starts, or — worst case — the camera stays
+crooked long after the shake should have stopped. None of these are random. Here are
+the four causes, ordered by how often they show up.</p>
+<h2>1. The shake writes to <code>position</code> instead of <code>offset</code></h2>
+<p><strong>Symptom.</strong> The shake fires — you can see the value change in the debugger — but
+on screen the camera doesn't move, or barely twitches.</p>
+<p><strong>Cause.</strong> Most camera-follow code sets <code>Camera2D.position</code> (or
+<code>global_position</code>) every frame to track the player: <code>position = target.global_position</code>.
+If your shake also writes to <code>position</code>, whichever one runs last that frame wins.
+Since follow logic usually runs every <code>_process()</code> tick right alongside your shake,
+the follow call quietly overwrites the shake before the frame ever renders.</p>
+<p><strong>Fix.</strong> Never shake <code>position</code> — shake <code>offset</code>. It's a separate property Camera2D
+gives you specifically so shake and follow don't collide:</p>
+<pre><code class="language-gdscript"># follow logic — untouched, keeps writing to position every frame
+func _process(_delta: float) -&gt; void:
+    global_position = target.global_position
+
+# shake — writes to offset instead, so it never fights the line above
+func shake(amount: float, duration: float) -&gt; void:
+    var t := create_tween()
+    var elapsed := 0.0
+    while elapsed &lt; duration:
+        offset = Vector2(randf_range(-amount, amount), randf_range(-amount, amount))
+        await get_tree().create_timer(0.02).timeout
+        elapsed += 0.02
+    offset = Vector2.ZERO
+</code></pre>
+<h2>2. Overlapping shakes fight each other</h2>
+<p><strong>Symptom.</strong> Rapid hits (a combo, a burst of bullets) make the camera snap and
+stutter instead of shaking smoothly — it looks broken exactly when it should look
+most intense.</p>
+<p><strong>Cause.</strong> Each <code>shake()</code> call above starts its own loop or tween writing to the
+same <code>offset</code>. Trigger a second shake before the first finishes and now two timers
+are both setting <code>offset</code> every frame — whichever one updates last on a given frame
+wins, so the camera jumps between two unrelated random values instead of blending.</p>
+<p><strong>Fix.</strong> Track the strongest active shake instead of letting every call run its own
+independent loop, and only ever start one shake process:</p>
+<pre><code class="language-gdscript">var _shake_strength := 0.0
+var _shake_decay := 4.0  # per second
+
+func add_shake(amount: float) -&gt; void:
+    _shake_strength = max(_shake_strength, amount)  # take the strongest hit, don't stack
+
+func _process(delta: float) -&gt; void:
+    if _shake_strength &gt; 0.01:
+        offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * _shake_strength
+        _shake_strength = lerp(_shake_strength, 0.0, _shake_decay * delta)
+    else:
+        offset = Vector2.ZERO
+</code></pre>
+<p>Now three hits in a row just raise <code>_shake_strength</code> back up — one continuous decay
+curve, no fighting timers.</p>
+<h2>3. <code>offset</code> never gets reset when the shake ends</h2>
+<p><strong>Symptom.</strong> After the last hit of a fight, the camera stays permanently nudged
+off-center — sometimes only noticeable because the player feels slightly
+off-screen.</p>
+<p><strong>Cause.</strong> A <code>Tween</code> that shakes <code>offset</code> and gets interrupted (the node dies, the
+scene changes, a <code>queue_free()</code> fires mid-tween) never reaches its own cleanup step,
+so whatever random value it last wrote stays there forever.</p>
+<p><strong>Fix.</strong> Don't rely on the tween finishing naturally — reset explicitly in
+<code>_exit_tree()</code>, and prefer the decay-based approach in cause #2, which always
+converges back to <code>Vector2.ZERO</code> on its own instead of depending on a tween
+completing:</p>
+<pre><code class="language-gdscript">func _exit_tree() -&gt; void:
+    offset = Vector2.ZERO
+</code></pre>
+<h2>4. Shake decays at a fixed frame count, not a fixed time</h2>
+<p><strong>Symptom.</strong> Shake feels right on your dev machine but too fast, too slow, or too
+short on a player's monitor with a different refresh rate.</p>
+<p><strong>Cause.</strong> Loops like <code>for i in range(10): offset = random(); await get_tree().process_frame</code>
+tie the shake's duration to frame count, not real time. At 60 FPS that's ~166ms; at
+144 FPS it's ~69ms — the same code produces a visibly different shake depending on
+the display.</p>
+<p><strong>Fix.</strong> Drive the decay off <code>delta</code>, as in cause #2's <code>lerp(_shake_strength, 0.0,
+_shake_decay * delta)</code> — the shake takes the same wall-clock time regardless of
+frame rate, because <code>delta</code> shrinks to compensate on faster monitors.</p>
+<h2>What all four have in common</h2>
+<p>Every case comes down to the same thing: <code>offset</code> is a single shared value, and
+shake logic that doesn't own it exclusively — through direct writes, competing
+tweens, or frame-count timing — ends up fighting something else that also touches
+the camera. Route shake through one decaying value, keep it separate from whatever
+sets <code>position</code>, and reset it on exit.</p>
+<p>If you'd rather skip writing (and re-debugging) this yourself, that's exactly what
+Saltmire Impact wraps into a single call — shake, hit-stop, flash and damage
+numbers combined into tunable combos that don't step on your own camera-follow code.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Impact</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-impact?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-camera-shake-not-working" data-product="Saltmire Impact" class="product-cta">https://saltmire.itch.io/saltmire-impact</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>

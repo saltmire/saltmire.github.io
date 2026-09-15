@@ -275,6 +275,17 @@ def read_products():
     except (ValueError, IndexError):
         print("  ! data.js ilegivel; pulando tools.html")
         return []
+    import datetime
+    for pr in data.get('products', []):
+        source = pr.get('sources', {}).get('itch', {})
+        try:
+            age = datetime.datetime.now(datetime.timezone.utc) - datetime.datetime.fromisoformat(source['last_success'])
+            fresh = source.get('status') == 'current' and age.total_seconds() <= 30*3600
+        except (KeyError, ValueError, TypeError):
+            fresh = False
+        if not fresh or (pr.get('paid') and pr.get('price') is None):
+            print('  ! coleta itch antiga/incompleta; preservando tools.html existente')
+            return []
     out = []
     for pr in data.get("products", []):
         if not pr.get("published"):
