@@ -1,0 +1,181 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>How to add a loading screen with a progress bar in Godot 4</title>
+<meta name="description" content="A practical Godot 4 tutorial for threaded scene loading — a CanvasLayer loading screen, a ProgressBar wired to ResourceLoader.load_threaded_get_status, and tips for minimum display time and a fade-out transition.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-loading-screen-progress-bar.html">
+<meta property="og:type" content="article"><meta property="og:title" content="How to add a loading screen with a progress bar in Godot 4">
+<meta property="og:description" content="A practical Godot 4 tutorial for threaded scene loading — a CanvasLayer loading screen, a ProgressBar wired to ResourceLoader.load_threaded_get_status, and tips for minimum display time and a fade-out transition."><meta property="og:url" content="https://saltmire.github.io/godot-4-loading-screen-progress-bar.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to add a loading screen with a progress bar in Godot 4","description":"A practical Godot 4 tutorial for threaded scene loading \u2014 a CanvasLayer loading screen, a ProgressBar wired to ResourceLoader.load_threaded_get_status, and tips for minimum display time and a fade-out transition.","datePublished":"2026-09-20","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-loading-screen-progress-bar.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>How to add a loading screen with a progress bar in Godot 4</h1><time datetime="2026-09-20">2026-09-20</time><p>The default <code>get_tree().change_scene_to_file()</code> works fine for small scenes — but once
+your scenes grow (packed tilemaps, many enemies, heavy resources), the player will see a
+frozen frame before anything appears. The fix is threaded loading with a real progress bar.</p>
+<h2>How Godot 4 threaded loading works</h2>
+<p>Godot 4's <code>ResourceLoader</code> can load a scene in a background thread while your loading
+screen stays interactive. There are three calls you need:</p>
+<ul>
+<li><code>load_threaded_request(path)</code> — queue the load; call once.</li>
+<li><code>load_threaded_get_status(path, progress_array)</code> — poll every frame; fills
+  <code>progress_array[0]</code> with a 0.0–1.0 float.</li>
+<li><code>load_threaded_get(path)</code> — grab the finished <code>PackedScene</code> when status is
+  <code>THREAD_LOAD_LOADED</code>.</li>
+</ul>
+<h2>Step 1: build the loading screen scene</h2>
+<p>Create a new scene with a <code>CanvasLayer</code> root (name it <code>LoadingScreen</code>) and add two
+children: a <code>ColorRect</code> that fills the screen and a <code>ProgressBar</code>.</p>
+<p>Set the <code>ProgressBar</code>:
+- <code>Min Value</code>: 0, <code>Max Value</code>: 100
+- Anchor it full-width near the bottom, or centered — your call.
+- <code>Show Percentage</code>: on or off, both are fine.</p>
+<p>Attach this script to <code>LoadingScreen</code>:</p>
+<pre><code class="language-gdscript">extends CanvasLayer
+
+@export var next_scene_path: String = &quot;&quot;
+
+var _progress := []
+
+func _ready() -&gt; void:
+    if next_scene_path.is_empty():
+        push_error(&quot;LoadingScreen: next_scene_path is not set.&quot;)
+        return
+    ResourceLoader.load_threaded_request(next_scene_path)
+
+func _process(_delta: float) -&gt; void:
+    if next_scene_path.is_empty():
+        return
+    var status := ResourceLoader.load_threaded_get_status(next_scene_path, _progress)
+    if not _progress.is_empty():
+        $ProgressBar.value = _progress[0] * 100.0
+    match status:
+        ResourceLoader.THREAD_LOAD_LOADED:
+            var scene: PackedScene = ResourceLoader.load_threaded_get(next_scene_path)
+            get_tree().change_scene_to_packed(scene)
+        ResourceLoader.THREAD_LOAD_FAILED:
+            push_error(&quot;LoadingScreen: failed to load &quot; + next_scene_path)
+</code></pre>
+<h2>Step 2: trigger it from any scene</h2>
+<p>Anywhere you would have called <code>change_scene_to_file("res://levels/level_2.tscn")</code>, do
+this instead:</p>
+<pre><code class="language-gdscript">func _go_to_next_level() -&gt; void:
+    var loader: PackedScene = preload(&quot;res://ui/LoadingScreen.tscn&quot;)
+    var screen := loader.instantiate()
+    screen.next_scene_path = &quot;res://levels/level_2.tscn&quot;
+    get_tree().root.add_child(screen)
+</code></pre>
+<p>The loading screen overlays the current scene, starts loading <code>level_2.tscn</code> in the
+background, and swaps out once the load is done. The current scene never freezes.</p>
+<h2>Step 3: enforce a minimum display time</h2>
+<p>For small scenes, loading finishes in milliseconds and the progress bar flashes past.
+A minimum display time of 0.5–1 second feels less jarring:</p>
+<pre><code class="language-gdscript">const MIN_SHOW_TIME := 0.6
+
+var _elapsed := 0.0
+var _loaded_scene: PackedScene = null
+
+func _process(delta: float) -&gt; void:
+    _elapsed += delta
+    if next_scene_path.is_empty():
+        return
+    var status := ResourceLoader.load_threaded_get_status(next_scene_path, _progress)
+    if not _progress.is_empty():
+        $ProgressBar.value = _progress[0] * 100.0
+    if status == ResourceLoader.THREAD_LOAD_LOADED and _loaded_scene == null:
+        _loaded_scene = ResourceLoader.load_threaded_get(next_scene_path)
+    if _loaded_scene != null and _elapsed &gt;= MIN_SHOW_TIME:
+        get_tree().change_scene_to_packed(_loaded_scene)
+</code></pre>
+<p>The scene is grabbed as soon as it is ready, but the transition waits until the minimum
+time has passed. The progress bar still fills to 100% immediately — only the <em>switch</em> is
+delayed.</p>
+<h2>Step 4: add a fade-out before switching</h2>
+<p><code>change_scene_to_packed</code> cuts instantly. To soften it, tween the <code>CanvasLayer</code> modulate
+alpha to 0 before switching:</p>
+<pre><code class="language-gdscript">if _loaded_scene != null and _elapsed &gt;= MIN_SHOW_TIME:
+    var t := create_tween()
+    t.tween_property(self, &quot;modulate:a&quot;, 0.0, 0.3)
+    await t.finished
+    get_tree().change_scene_to_packed(_loaded_scene)
+</code></pre>
+<p>Keep the tween short (0.2–0.4 s). Anything longer kills pacing.</p>
+<h2>Common gotcha: duplicate load requests</h2>
+<p>If you call <code>load_threaded_request</code> on a path that is already being loaded (for example,
+a player hits a trigger twice), Godot returns <code>ERR_ALREADY_IN_USE</code>. Add a guard so it
+does not spam errors:</p>
+<pre><code class="language-gdscript">func _ready() -&gt; void:
+    var err := ResourceLoader.load_threaded_request(next_scene_path)
+    if err != OK and err != ERR_ALREADY_IN_USE:
+        push_error(&quot;load_threaded_request failed: &quot; + str(err))
+</code></pre>
+<p><code>ERR_ALREADY_IN_USE</code> means the load is already queued — <code>load_threaded_get</code> will still
+return the resource when it finishes, so no action needed.</p>
+<h2>The finished loading screen</h2>
+<p>That is the whole setup: a <code>CanvasLayer</code> overlay, three <code>ResourceLoader</code> calls, an
+optional minimum display time, and an optional fade-out. It works for any scene size.
+If you want richer transitions on the way in or out — iris wipes, pixelate, dissolve,
+or slides — Saltmire Transitions wraps those into a one-line call and handles the
+scene-switch timing internally.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Transitions</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-transitions-scene-transition-kit-for-godot-4?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-loading-screen-progress-bar" data-product="Saltmire Transitions" class="product-cta">https://saltmire.itch.io/saltmire-transitions-scene-transition-kit-for-godot-4</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
