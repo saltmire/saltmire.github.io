@@ -1,0 +1,218 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>Area2D vs RayCast2D vs ShapeCast2D for melee attacks in Godot 4 — which and when</title>
+<meta name="description" content="A practical Godot 4 comparison of the three ways to detect a sword swing, punch or bullet hit — Area2D, RayCast2D and ShapeCast2D — with the one-frame delay nobody warns you about and a clear rule for picking.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-area2d-vs-raycast-vs-shapecast.html">
+<meta property="og:type" content="article"><meta property="og:title" content="Area2D vs RayCast2D vs ShapeCast2D for melee attacks in Godot 4 — which and when">
+<meta property="og:description" content="A practical Godot 4 comparison of the three ways to detect a sword swing, punch or bullet hit — Area2D, RayCast2D and ShapeCast2D — with the one-frame delay nobody warns you about and a clear rule for picking."><meta property="og:url" content="https://saltmire.github.io/godot-4-area2d-vs-raycast-vs-shapecast.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Area2D vs RayCast2D vs ShapeCast2D for melee attacks in Godot 4 \u2014 which and when","description":"A practical Godot 4 comparison of the three ways to detect a sword swing, punch or bullet hit \u2014 Area2D, RayCast2D and ShapeCast2D \u2014 with the one-frame delay nobody warns you about and a clear rule for picking.","datePublished":"2026-09-23","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-area2d-vs-raycast-vs-shapecast.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>Area2D vs RayCast2D vs ShapeCast2D for melee attacks in Godot 4 — which and when</h1><time datetime="2026-09-23">2026-09-23</time><p>You press attack, the sword animation plays, and now the game has to answer one
+question: <em>what did that swing touch?</em> Godot 4 gives you three nodes that can answer it —
+<code>Area2D</code>, <code>RayCast2D</code> and <code>ShapeCast2D</code> — and every tutorial seems to pick a different
+one. They are not interchangeable. Each one answers the question at a different <em>time</em>
+and with a different <em>shape</em>, and that is the whole decision.</p>
+<h2>Area2D: an overlap you listen to</h2>
+<p>An <code>Area2D</code> with a <code>CollisionShape2D</code> child sits in the world and emits signals when
+other areas or bodies enter it. For melee, you enable it during the active frames of the
+attack and listen for <code>area_entered</code>.</p>
+<pre><code class="language-gdscript">extends Area2D # the sword's hitbox
+
+@export var damage := 10
+
+func _ready() -&gt; void:
+    monitoring = false
+    area_entered.connect(_on_area_entered)
+
+func start_swing() -&gt; void:
+    set_deferred(&quot;monitoring&quot;, true)
+
+func end_swing() -&gt; void:
+    set_deferred(&quot;monitoring&quot;, false)
+
+func _on_area_entered(area: Area2D) -&gt; void:
+    if area.has_method(&quot;take_hit&quot;):
+        area.take_hit(damage)
+</code></pre>
+<p>Strengths: it's visual (you size the shape in the editor), it tracks lingering hitboxes
+for free (a fire patch, a spinning blade), and it plays nicely with collision layers.</p>
+<p>The catch everyone hits eventually: <strong>Area2D results lag by one physics frame.</strong> Overlaps
+are computed during the physics step, so if you turn <code>monitoring</code> on and immediately call
+<code>get_overlapping_areas()</code> in the same frame, you get an empty array. For a 3-frame jab at
+60 FPS, losing one frame is a third of your active window. That's the source of the
+classic "my attack only hits sometimes" bug.</p>
+<h2>RayCast2D: a line, checked right now</h2>
+<p>A <code>RayCast2D</code> tests a single line from its origin to <code>target_position</code>. Its killer
+feature for combat is <code>force_raycast_update()</code> — it queries the physics space
+<strong>immediately</strong>, in the same frame.</p>
+<pre><code class="language-gdscript">@onready var ray: RayCast2D = $RayCast2D
+
+func fire_hitscan(direction: Vector2, reach: float) -&gt; void:
+    ray.target_position = direction.normalized() * reach
+    ray.collide_with_areas = true
+    ray.force_raycast_update()
+    if ray.is_colliding():
+        var target := ray.get_collider()
+        var point := ray.get_collision_point() # great for spawning a spark
+        if target.has_method(&quot;take_hit&quot;):
+            target.take_hit(10)
+</code></pre>
+<p>Perfect for hitscan guns, lasers, line-of-sight checks and spear thrusts. Bad for a wide
+sword arc: a line has no thickness, so a swing that visually clips an enemy's shoulder
+will miss if the ray passes a pixel beside it. It also only returns the <strong>first</strong>
+thing it hits — no piercing without extra work.</p>
+<h2>ShapeCast2D: a shape, swept and checked right now</h2>
+<p><code>ShapeCast2D</code> (new in Godot 4) is the middle ground: it sweeps a real shape along
+<code>target_position</code> and, like the ray, can be forced to update on the spot. Set
+<code>target_position</code> to <code>Vector2.ZERO</code> and it becomes an instant "what overlaps this shape
+right now" query.</p>
+<pre><code class="language-gdscript">@onready var cast: ShapeCast2D = $ShapeCast2D
+
+func swing() -&gt; void:
+    cast.target_position = Vector2.ZERO # instant overlap, no sweep
+    cast.collide_with_areas = true
+    cast.force_shapecast_update()
+    for i in cast.get_collision_count():
+        var target := cast.get_collider(i)
+        if target and target.has_method(&quot;take_hit&quot;):
+            target.take_hit(10)
+</code></pre>
+<p>It has thickness like an Area2D, answers in the same frame like a RayCast2D, and returns
+<strong>multiple</strong> hits (capped by <code>max_results</code>). The trade-off: it's a one-shot query, not a
+listener — nothing tells you when something walks into a lingering hitbox later.</p>
+<h2>The comparison</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Area2D</th>
+<th>RayCast2D</th>
+<th>ShapeCast2D</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shape</td>
+<td>any, has area</td>
+<td>a line</td>
+<td>any, has area</td>
+</tr>
+<tr>
+<td>When results are ready</td>
+<td>next physics frame</td>
+<td>same frame (forced)</td>
+<td>same frame (forced)</td>
+</tr>
+<tr>
+<td>Multiple targets</td>
+<td>yes</td>
+<td>first hit only</td>
+<td>yes (<code>max_results</code>)</td>
+</tr>
+<tr>
+<td>Lingering hitboxes</td>
+<td>built in (signals)</td>
+<td>no</td>
+<td>no — you re-query</td>
+</tr>
+<tr>
+<td>Collision point</td>
+<td>no</td>
+<td>yes</td>
+<td>yes, per hit</td>
+</tr>
+<tr>
+<td>Fast projectiles (tunneling)</td>
+<td>can tunnel</td>
+<td>sweeps, won't tunnel</td>
+<td>sweeps, won't tunnel</td>
+</tr>
+<tr>
+<td>Best for</td>
+<td>hurtboxes, AoE zones, slow attacks</td>
+<td>hitscan, lasers, LOS</td>
+<td>instant melee, dashes, fast bullets</td>
+</tr>
+</tbody>
+</table>
+<h2>The rule that decides it</h2>
+<p>Ask two questions:</p>
+<ol>
+<li><strong>Does the hit need to land on the exact frame the button was pressed?</strong> Short jabs,
+   parries and hitscan do. Use a forced <code>RayCast2D</code> (thin) or <code>ShapeCast2D</code> (wide).</li>
+<li><strong>Does the hitbox stay alive and keep hurting things that walk into it?</strong> Fire, spikes,
+   a spinning blade, and — importantly — every character's <strong>hurtbox</strong>. That's <code>Area2D</code>.</li>
+</ol>
+<p>Most shipped action games end up with both: <code>Area2D</code> hurtboxes on every character, and
+the <em>attack</em> side checked with whatever fits the move. What they all need on top, no
+matter which node detects the overlap, is the same boring layer: teams so enemies don't
+hit each other, a per-swing "already hit" list so one slash doesn't deal damage five
+frames in a row, i-frames, and knockback direction.</p>
+<p>That layer is what Saltmire Hitbox is — a drop-in Hitbox2D / Hurtbox2D pair with teams,
+per-swing hit tracking, i-frames and knockback already wired, so you pick the detection
+style above and skip writing the bookkeeping for the third time.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Hitbox</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-hitbox?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-area2d-vs-raycast-vs-shapecast" data-product="Saltmire Hitbox" class="product-cta">https://saltmire.itch.io/saltmire-hitbox</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
