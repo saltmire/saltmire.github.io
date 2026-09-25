@@ -1,0 +1,189 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>What I learned building a health component with i-frames in Godot 4</title>
+<meta name="description" content="Lessons from building a reusable health and damage component in Godot 4 — why health belongs in its own node, the double-hit bug i-frames actually fix, and why &quot;died&quot; must only fire once.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-health-component-iframes.html">
+<meta property="og:type" content="article"><meta property="og:title" content="What I learned building a health component with i-frames in Godot 4">
+<meta property="og:description" content="Lessons from building a reusable health and damage component in Godot 4 — why health belongs in its own node, the double-hit bug i-frames actually fix, and why &quot;died&quot; must only fire once."><meta property="og:url" content="https://saltmire.github.io/godot-4-health-component-iframes.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"What I learned building a health component with i-frames in Godot 4","description":"Lessons from building a reusable health and damage component in Godot 4 \u2014 why health belongs in its own node, the double-hit bug i-frames actually fix, and why \"died\" must only fire once.","datePublished":"2026-09-25","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-health-component-iframes.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>What I learned building a health component with i-frames in Godot 4</h1><time datetime="2026-09-25">2026-09-25</time><p>Every Godot 4 project I start ends up with <code>var health := 100</code> pasted into the player, then
+the enemy, then the breakable crate. Then the three copies drift apart. Here is what I
+learned pulling health out into one reusable component, roughly in the order each bug
+showed up.</p>
+<h2>Lesson 1: health is not the player's job</h2>
+<p>The first version always lives inside the player script:</p>
+<pre><code class="language-gdscript">var health := 100
+
+func take_damage(amount: int) -&gt; void:
+    health -= amount
+    if health &lt;= 0:
+        die()
+</code></pre>
+<p>That's fine until an enemy needs the same logic, then a destructible barrel, then a boss
+with a health bar. Once there are three copies, one gets clamping, one gets a signal for
+the UI, and one gets neither. The fix is a small node you can drop into any scene:</p>
+<pre><code class="language-gdscript">class_name HealthComponent
+extends Node
+
+signal health_changed(current: int, max_health: int)
+signal died
+
+@export var max_health := 100
+var current := max_health
+
+func _ready() -&gt; void:
+    current = max_health
+
+func damage(amount: int) -&gt; void:
+    current = clampi(current - amount, 0, max_health)
+    health_changed.emit(current, max_health)
+    if current == 0:
+        died.emit()
+
+func heal(amount: int) -&gt; void:
+    current = clampi(current + amount, 0, max_health)
+    health_changed.emit(current, max_health)
+</code></pre>
+<p>The owner (player, enemy, crate) connects to <code>died</code> and decides what death <em>means</em>. The
+component only counts. That split turned out to matter more than any of the code.</p>
+<h2>Lesson 2: the health bar should never ask for health</h2>
+<p>My early UI code read <code>player.health</code> every frame in <code>_process</code>. That works, but it ties
+the health bar to one specific node and breaks the moment the player is freed and
+respawned. With the signal, the bar just listens:</p>
+<pre><code class="language-gdscript">func bind(health: HealthComponent) -&gt; void:
+    health.health_changed.connect(_on_health_changed)
+    _on_health_changed(health.current, health.max_health)
+
+func _on_health_changed(current: int, max_health: int) -&gt; void:
+    value = float(current) / max_health * 100.0
+</code></pre>
+<p>Calling the handler once inside <code>bind()</code> is the part I kept forgetting. Without it the bar
+shows 100% until the first hit, even if the scene loaded with the player at half health.</p>
+<h2>Lesson 3: the double-hit bug is what i-frames actually fix</h2>
+<p>I thought invincibility frames were a design choice, something that makes the game feel
+fairer. In practice they fixed a real bug first. A spike hitbox overlapping the player
+for 12 physics frames dealt damage 12 times, and a single sword swing could hit twice
+when the enemy's hurtbox entered, left, and re-entered the area during the animation.</p>
+<p>A timer inside the component fixes both at the source:</p>
+<pre><code class="language-gdscript">@export var iframe_duration := 0.5
+var _invulnerable := false
+
+func damage(amount: int) -&gt; void:
+    if _invulnerable or current == 0:
+        return
+    current = clampi(current - amount, 0, max_health)
+    health_changed.emit(current, max_health)
+    if current == 0:
+        died.emit()
+        return
+    if iframe_duration &gt; 0.0:
+        _invulnerable = true
+        get_tree().create_timer(iframe_duration).timeout.connect(
+            func(): _invulnerable = false)
+</code></pre>
+<p>Enemies in a horde game usually want <code>iframe_duration = 0.0</code> (or something very short)
+so fast weapons still feel fast. The player usually wants 0.5–1.0 seconds. Making it an
+export instead of hard-coding it was what let one component work for both.</p>
+<h2>Lesson 4: "died" must fire exactly once</h2>
+<p>This bug wasted an evening. Two projectiles hit an enemy on the same physics frame. Both
+called <code>damage()</code>, both saw <code>current == 0</code> afterwards, and <code>died</code> fired twice. The enemy
+dropped two coins, the kill counter went up by two, and the second <code>queue_free()</code> threw
+an error on an instance that was already queued.</p>
+<p>That's why the check at the top of <code>damage()</code> has <code>or current == 0</code>. Once health reaches
+zero, the component ignores everything after it. It's one condition, and it's also the
+only place that condition needs to exist. Anything listening to <code>died</code> can assume it runs
+once per life.</p>
+<p>If you add a respawn, give it an explicit reset instead of healing from zero:</p>
+<pre><code class="language-gdscript">func reset() -&gt; void:
+    current = max_health
+    _invulnerable = false
+    health_changed.emit(current, max_health)
+</code></pre>
+<p><code>heal()</code> on a dead entity was the other source of zombies. I made healing from 0 do
+nothing, and revival only happens on purpose.</p>
+<h2>Lesson 5: flash the sprite from the owner, not the component</h2>
+<p>The component should not know there's a sprite. When I put <code>modulate</code> changes inside it,
+it broke immediately on the crate, which used a different node structure. Now the owner
+reacts to the signal it already has:</p>
+<pre><code class="language-gdscript">func _ready() -&gt; void:
+    $HealthComponent.health_changed.connect(func(_c, _m): _flash())
+
+func _flash() -&gt; void:
+    var t := create_tween()
+    $Sprite2D.modulate = Color(1, 0.4, 0.4)
+    t.tween_property($Sprite2D, &quot;modulate&quot;, Color.WHITE, 0.15)
+</code></pre>
+<h2>What I'd do differently starting over</h2>
+<p>Build the component first, before the second thing that can take damage exists. Put
+i-frames and the "dead means dead" guard in from day one, because both bugs show up the
+first time two hits land close together. And keep the component dumb: it counts, emits,
+and refuses. Everything visual belongs to whoever owns it.</p>
+<p>The part this post skips is the other half: <em>who</em> is allowed to hit <em>whom</em>. That's
+collision layers, teams, making sure the player's own sword doesn't hurt the player, and
+knockback direction. That's the wiring I got tired of redoing in every project.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Hitbox</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-hitbox?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-health-component-iframes" data-product="Saltmire Hitbox" class="product-cta">https://saltmire.itch.io/saltmire-hitbox</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
