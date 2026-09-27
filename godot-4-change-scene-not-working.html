@@ -1,0 +1,171 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>Godot 4 change_scene_to_file not working? 4 causes and fixes</title>
+<meta name="description" content="get_tree().change_scene_to_file() fails silently, throws &quot;Can&#x27;t change this state while flushing queries&quot;, crashes with a null get_tree(), or fires twice. Here are the 4 real causes in Godot 4 — code running after the scene is gone, physics callbacks, broken paths in exports, and double triggers — each with the exact fix.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-change-scene-not-working.html">
+<meta property="og:type" content="article"><meta property="og:title" content="Godot 4 change_scene_to_file not working? 4 causes and fixes">
+<meta property="og:description" content="get_tree().change_scene_to_file() fails silently, throws &quot;Can&#x27;t change this state while flushing queries&quot;, crashes with a null get_tree(), or fires twice. Here are the 4 real causes in Godot 4 — code running after the scene is gone, physics callbacks, broken paths in exports, and double triggers — each with the exact fix."><meta property="og:url" content="https://saltmire.github.io/godot-4-change-scene-not-working.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Godot 4 change_scene_to_file not working? 4 causes and fixes","description":"get_tree().change_scene_to_file() fails silently, throws \"Can't change this state while flushing queries\", crashes with a null get_tree(), or fires twice. Here are the 4 real causes in Godot 4 \u2014 code running after the scene is gone, physics callbacks, broken paths in exports, and double triggers \u2014 each with the exact fix.","datePublished":"2026-09-27","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-change-scene-not-working.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>Godot 4 change_scene_to_file not working? 4 causes and fixes</h1><time datetime="2026-09-27">2026-09-27</time><p>Changing scenes in Godot 4 looks like a one-liner: <code>get_tree().change_scene_to_file("res://level_2.tscn")</code>.
+Then the door trigger throws an error, the game crashes one line later, or the build
+you exported loads a black screen. The call itself is almost never the bug — what
+happens <em>around</em> it is. Here are the four causes, ordered by how often they show up.</p>
+<h2>1. Code after the call runs on a scene that's already gone</h2>
+<p><strong>Symptom.</strong> The scene changes, but you get
+<code>Cannot call method 'get_first_node_in_group' on a null value</code> (or any
+<code>get_tree()</code>-based call failing) on the line right after <code>change_scene_to_file()</code>.</p>
+<p><strong>Cause.</strong> Since Godot 4.2, the outgoing scene is removed from the tree
+<em>immediately</em> when you call <code>change_scene_to_file()</code>. From that point until the end
+of the frame, <code>get_tree()</code> on that scene returns <code>null</code> and
+<code>get_tree().current_scene</code> is <code>null</code> too — the new scene isn't added until the end
+of the frame. So anything you do after the call is running on a node that's no
+longer in the tree.</p>
+<pre><code class="language-gdscript"># broken — get_tree() is null on the second line
+func _on_exit_reached() -&gt; void:
+    get_tree().change_scene_to_file(&quot;res://levels/level_2.tscn&quot;)
+    get_tree().current_scene.spawn_player()  # null
+</code></pre>
+<p><strong>Fix.</strong> Make the scene change the <em>last</em> thing the old scene does. Anything the new
+scene needs goes into an autoload beforehand, and the new scene reads it in its own
+<code>_ready()</code>:</p>
+<pre><code class="language-gdscript"># old scene
+func _on_exit_reached() -&gt; void:
+    GameState.spawn_point = &quot;north_door&quot;   # autoload survives the change
+    get_tree().change_scene_to_file(&quot;res://levels/level_2.tscn&quot;)
+
+# new scene (level_2.gd)
+func _ready() -&gt; void:
+    var marker := get_node(&quot;Spawns/&quot; + GameState.spawn_point) as Marker2D
+    $Player.global_position = marker.global_position
+</code></pre>
+<h2>2. "Can't change this state while flushing queries"</h2>
+<p><strong>Symptom.</strong> You change scene from a <code>body_entered</code> / <code>area_entered</code> signal (a door,
+a level exit, a death pit) and the output fills with
+<code>Can't change this state while flushing queries. Use call_deferred() or set_deferred() to change monitoring state instead.</code></p>
+<p><strong>Cause.</strong> Those signals fire <em>during</em> the physics step, while the physics server is
+still processing collisions. Changing the scene removes every <code>Area2D</code> and
+<code>CollisionShape2D</code> in it right then — in the middle of the step that's iterating
+over them.</p>
+<p><strong>Fix.</strong> Defer the call so it runs after the physics step finishes:</p>
+<pre><code class="language-gdscript">func _on_body_entered(body: Node2D) -&gt; void:
+    if body.is_in_group(&quot;player&quot;):
+        get_tree().change_scene_to_file.call_deferred(&quot;res://levels/level_2.tscn&quot;)
+</code></pre>
+<p>The same rule applies to anything else that adds or frees collision nodes from inside
+a physics callback — defer it.</p>
+<h2>3. The path breaks after a rename — or only in the exported build</h2>
+<p><strong>Symptom.</strong> It worked yesterday, now nothing happens. Or it works perfectly in the
+editor but the exported game shows a black screen or stays on the same scene.</p>
+<p><strong>Cause.</strong> <code>change_scene_to_file()</code> doesn't throw — it returns an <code>Error</code>, and most
+code ignores it. Two common reasons it fails:</p>
+<ul>
+<li>You moved or renamed the <code>.tscn</code> in the FileSystem dock. The editor updates
+  references inside scenes, but <strong>not</strong> string literals in your scripts.</li>
+<li>Case mismatch: <code>res://Levels/Level_2.tscn</code> vs <code>res://levels/level_2.tscn</code>. Windows
+  and macOS don't care in the editor; the exported <code>.pck</code> does.</li>
+</ul>
+<p><strong>Fix.</strong> First, stop ignoring the return value:</p>
+<pre><code class="language-gdscript">var err := get_tree().change_scene_to_file(path)
+if err != OK:
+    push_error(&quot;Scene change to %s failed: %s&quot; % [path, error_string(err)])
+</code></pre>
+<p>Then remove the fragile string entirely. Export a <code>PackedScene</code> and drag the file into
+the Inspector — Godot tracks it by UID, so renames and moves keep working:</p>
+<pre><code class="language-gdscript">@export var next_scene: PackedScene
+
+func go_next() -&gt; void:
+    get_tree().change_scene_to_packed.call_deferred(next_scene)
+</code></pre>
+<h2>4. The change fires twice</h2>
+<p><strong>Symptom.</strong> Your fade plays twice, a level gets skipped, or you get a second error
+right after the first scene change.</p>
+<p><strong>Cause.</strong> The player's body often overlaps a trigger with more than one shape, or
+re-enters it on the same frame, so <code>body_entered</code> fires more than once. Each call
+queues another scene change — and if you have a fade tween in front of it, you now
+have two tweens racing each other.</p>
+<p><strong>Fix.</strong> Guard it with a flag and switch the trigger off on the first hit:</p>
+<pre><code class="language-gdscript">var _leaving := false
+
+func _on_body_entered(body: Node2D) -&gt; void:
+    if _leaving or not body.is_in_group(&quot;player&quot;):
+        return
+    _leaving = true
+    set_deferred(&quot;monitoring&quot;, false)
+    get_tree().change_scene_to_packed.call_deferred(next_scene)
+</code></pre>
+<h2>What all four have in common</h2>
+<p>A scene change is a destructive operation on the whole tree: it frees every node,
+including the one that asked for it. Treat it like <code>queue_free()</code> on yourself —
+do it last, do it deferred when physics is involved, point it at a tracked
+resource instead of a string, and make sure it only happens once.</p>
+<p>Once that's solid, the next thing most games want is a transition that hides the
+cut — and wiring a fade, a loading step and the deferred change together is exactly
+where these four bugs love to come back. Saltmire Transitions packages that part
+into a single call, with the fades, wipes and the safe scene swap already handled,
+and it's free.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Transitions</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-transitions-scene-transition-kit-for-godot-4?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-change-scene-not-working" data-product="Saltmire Transitions" class="product-cta">https://saltmire.itch.io/saltmire-transitions-scene-transition-kit-for-godot-4</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
