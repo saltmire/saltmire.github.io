@@ -1,0 +1,213 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>How to save game settings (volume, fullscreen, keybinds) in Godot 4 with ConfigFile</title>
+<meta name="description" content="A practical Godot 4 tutorial for an options menu that remembers itself — a Settings autoload backed by ConfigFile, audio bus volume, fullscreen and vsync, and keyboard rebinds that survive a restart.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-save-settings-configfile.html">
+<meta property="og:type" content="article"><meta property="og:title" content="How to save game settings (volume, fullscreen, keybinds) in Godot 4 with ConfigFile">
+<meta property="og:description" content="A practical Godot 4 tutorial for an options menu that remembers itself — a Settings autoload backed by ConfigFile, audio bus volume, fullscreen and vsync, and keyboard rebinds that survive a restart."><meta property="og:url" content="https://saltmire.github.io/godot-4-save-settings-configfile.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to save game settings (volume, fullscreen, keybinds) in Godot 4 with ConfigFile","description":"A practical Godot 4 tutorial for an options menu that remembers itself \u2014 a Settings autoload backed by ConfigFile, audio bus volume, fullscreen and vsync, and keyboard rebinds that survive a restart.","datePublished":"2026-10-01","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-save-settings-configfile.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>How to save game settings (volume, fullscreen, keybinds) in Godot 4 with ConfigFile</h1><time datetime="2026-10-01">2026-10-01</time><p>Every player opens the options menu, turns the music down, and expects it to <em>stay</em> down
+next time. In Godot 4 the right tool for that is not your save system and not JSON — it's
+<code>ConfigFile</code>, a tiny INI-style file that Godot reads and writes in one call.</p>
+<p>This tutorial builds a <code>Settings</code> autoload that stores volume, fullscreen, vsync and
+keyboard rebinds in <code>user://settings.cfg</code> and re-applies them every time the game starts.</p>
+<h2>Why ConfigFile for settings</h2>
+<ul>
+<li>It's human-readable (<code>[audio]</code> / <code>master=0.8</code>), so you can debug it by opening the file.</li>
+<li><code>get_value(section, key, default)</code> gives you a fallback for free — a missing key never crashes.</li>
+<li>Settings are <strong>per machine</strong>, not per save slot. Keeping them out of your game save means
+  deleting a slot never resets the player's volume.</li>
+</ul>
+<h2>Step 1: the Settings autoload</h2>
+<p>Create <code>settings.gd</code> and register it in <strong>Project → Project Settings → Globals → Autoload</strong>
+with the name <code>Settings</code>.</p>
+<pre><code class="language-gdscript">extends Node
+
+const PATH := &quot;user://settings.cfg&quot;
+
+var config := ConfigFile.new()
+
+func _ready() -&gt; void:
+    var err := config.load(PATH)
+    if err != OK and err != ERR_FILE_NOT_FOUND:
+        push_warning(&quot;Settings: could not read %s (error %d), using defaults&quot; % [PATH, err])
+    apply_all()
+
+func get_setting(section: String, key: String, default_value: Variant) -&gt; Variant:
+    return config.get_value(section, key, default_value)
+
+func set_setting(section: String, key: String, value: Variant) -&gt; void:
+    config.set_value(section, key, value)
+
+func save() -&gt; void:
+    var err := config.save(PATH)
+    if err != OK:
+        push_error(&quot;Settings: save failed (error %d)&quot; % err)
+
+func apply_all() -&gt; void:
+    apply_volume(&quot;Master&quot;)
+    apply_volume(&quot;Music&quot;)
+    apply_volume(&quot;SFX&quot;)
+    apply_display()
+    apply_keybinds()
+</code></pre>
+<p><code>ERR_FILE_NOT_FOUND</code> on the very first launch is normal — there's no file yet, so every
+<code>get_value</code> falls back to its default.</p>
+<h2>Step 2: audio volume per bus</h2>
+<p>Store volume as a <strong>linear 0.0–1.0</strong> value (what a slider gives you) and convert to
+decibels only when applying. Make sure the buses <code>Music</code> and <code>SFX</code> exist in the Audio tab,
+or skip them.</p>
+<pre><code class="language-gdscript">func apply_volume(bus_name: String) -&gt; void:
+    var idx := AudioServer.get_bus_index(bus_name)
+    if idx == -1:
+        return
+    var linear: float = get_setting(&quot;audio&quot;, bus_name.to_lower(), 1.0)
+    AudioServer.set_bus_volume_db(idx, linear_to_db(linear))
+    AudioServer.set_bus_mute(idx, linear &lt;= 0.001)
+</code></pre>
+<p>The mute line matters: <code>linear_to_db(0.0)</code> is <code>-inf</code>, and muting the bus at zero is cleaner
+than relying on it.</p>
+<h2>Step 3: fullscreen and vsync</h2>
+<pre><code class="language-gdscript">func apply_display() -&gt; void:
+    var fullscreen: bool = get_setting(&quot;display&quot;, &quot;fullscreen&quot;, false)
+    DisplayServer.window_set_mode(
+        DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen
+        else DisplayServer.WINDOW_MODE_WINDOWED)
+
+    var vsync: bool = get_setting(&quot;display&quot;, &quot;vsync&quot;, true)
+    DisplayServer.window_set_vsync_mode(
+        DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
+</code></pre>
+<p>On the web export, fullscreen requires a user gesture, so call this from a button press
+rather than only at startup.</p>
+<h2>Step 4: keyboard rebinds that persist</h2>
+<p>Storing whole <code>InputEvent</code> objects works but makes the file noisy. For keyboard bindings,
+the physical keycode (an <code>int</code>) is enough and survives keyboard layout changes.</p>
+<pre><code class="language-gdscript">const REBINDABLE := [&quot;move_left&quot;, &quot;move_right&quot;, &quot;jump&quot;, &quot;attack&quot;]
+
+func rebind(action: String, event: InputEventKey) -&gt; void:
+    # Replace only the keyboard event; keep gamepad bindings intact.
+    for old in InputMap.action_get_events(action):
+        if old is InputEventKey:
+            InputMap.action_erase_event(action, old)
+    InputMap.action_add_event(action, event)
+    set_setting(&quot;keybinds&quot;, action, event.physical_keycode)
+
+func apply_keybinds() -&gt; void:
+    for action in REBINDABLE:
+        var code: int = get_setting(&quot;keybinds&quot;, action, 0)
+        if code == 0:
+            continue  # never rebound — keep the Input Map default
+        var ev := InputEventKey.new()
+        ev.physical_keycode = code
+        for old in InputMap.action_get_events(action):
+            if old is InputEventKey:
+                InputMap.action_erase_event(action, old)
+        InputMap.action_add_event(action, ev)
+</code></pre>
+<p>To capture the new key, put a "press any key" state in your rebind button and grab the
+next <code>InputEventKey</code> in <code>_unhandled_input</code>, then call <code>Settings.rebind(action, event)</code>.</p>
+<h2>Step 5: wire the options menu</h2>
+<pre><code class="language-gdscript">extends Control
+
+@onready var music_slider: HSlider = %MusicSlider
+@onready var fullscreen_check: CheckButton = %FullscreenCheck
+
+func _ready() -&gt; void:
+    music_slider.value = Settings.get_setting(&quot;audio&quot;, &quot;music&quot;, 1.0)
+    fullscreen_check.button_pressed = Settings.get_setting(&quot;display&quot;, &quot;fullscreen&quot;, false)
+
+    music_slider.value_changed.connect(func(v: float) -&gt; void:
+        Settings.set_setting(&quot;audio&quot;, &quot;music&quot;, v)
+        Settings.apply_volume(&quot;Music&quot;))
+    music_slider.drag_ended.connect(func(_changed: bool) -&gt; void:
+        Settings.save())
+
+    fullscreen_check.toggled.connect(func(on: bool) -&gt; void:
+        Settings.set_setting(&quot;display&quot;, &quot;fullscreen&quot;, on)
+        Settings.apply_display()
+        Settings.save())
+</code></pre>
+<p>Set the slider's range to <code>0</code>–<code>1</code> with a step of <code>0.05</code>. Apply on every <code>value_changed</code>
+so the player hears the change live, but only write to disk on <code>drag_ended</code> — no need to
+hit the file system 60 times a second.</p>
+<h2>Common mistakes</h2>
+<ul>
+<li><strong>Saving to <code>res://</code>.</strong> It's read-only in exported games. Always use <code>user://</code>.</li>
+<li><strong>Applying settings in the menu scene only.</strong> If the menu isn't loaded, nothing applies.
+  That's why <code>apply_all()</code> runs in the autoload's <code>_ready()</code>.</li>
+<li><strong>Storing decibels.</strong> Sliders feel wrong in dB; store linear, convert on apply.</li>
+<li><strong>Mixing settings into the save slot.</strong> One file per machine for settings, one per slot
+  for progress.</li>
+</ul>
+<h2>Wrapping up</h2>
+<p><code>ConfigFile</code> covers the options menu. Your actual game progress — player stats, inventory,
+unlocked levels — is a different job, and that's the part where writing your own
+serialization gets tedious. If you'd rather save and load that state in a single call,
+Saltmire Save Lite is a free, MIT-licensed add-on that does exactly that.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Save Lite</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-save-lite?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-save-settings-configfile" data-product="Saltmire Save Lite" class="product-cta">https://saltmire.itch.io/saltmire-save-lite</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
