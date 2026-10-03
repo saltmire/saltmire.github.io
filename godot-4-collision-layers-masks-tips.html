@@ -1,0 +1,211 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>7 Godot 4 collision layer and mask tips that save you an afternoon of debugging</title>
+<meta name="description" content="Collision layers vs collision masks in Godot 4, explained with 7 practical tips — the one-line rule, naming layers, the 1-based vs bitmask trap, a constants script, one-way Area2D detection, raycast masks and TileSet physics layers.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-collision-layers-masks-tips.html">
+<meta property="og:type" content="article"><meta property="og:title" content="7 Godot 4 collision layer and mask tips that save you an afternoon of debugging">
+<meta property="og:description" content="Collision layers vs collision masks in Godot 4, explained with 7 practical tips — the one-line rule, naming layers, the 1-based vs bitmask trap, a constants script, one-way Area2D detection, raycast masks and TileSet physics layers."><meta property="og:url" content="https://saltmire.github.io/godot-4-collision-layers-masks-tips.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"7 Godot 4 collision layer and mask tips that save you an afternoon of debugging","description":"Collision layers vs collision masks in Godot 4, explained with 7 practical tips \u2014 the one-line rule, naming layers, the 1-based vs bitmask trap, a constants script, one-way Area2D detection, raycast masks and TileSet physics layers.","datePublished":"2026-10-03","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-collision-layers-masks-tips.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>7 Godot 4 collision layer and mask tips that save you an afternoon of debugging</h1><time datetime="2026-10-03">2026-10-03</time><p>Collision layers and masks are the Godot 4 feature everybody "gets" in five minutes and
+then fights for the rest of the project. The player walks through a wall, the enemy's
+sword hits other enemies, a raycast sees nothing. Nine times out of ten the physics is
+fine — the bits are wrong.</p>
+<p>Here are seven tips that make the bits boring.</p>
+<h2>1. Layer is what you are, mask is what you look for</h2>
+<p>That is the whole rule. <code>collision_layer</code> says <em>which groups this object belongs to</em>.
+<code>collision_mask</code> says <em>which groups this object scans for</em>. Write it down for your game
+before you click a single checkbox:</p>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Layer (what it is)</th>
+<th>Mask (what it looks for)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Player body</td>
+<td>player</td>
+<td>world, enemy</td>
+</tr>
+<tr>
+<td>Enemy body</td>
+<td>enemy</td>
+<td>world, player</td>
+</tr>
+<tr>
+<td>Player sword (Area2D)</td>
+<td>—</td>
+<td>enemy_hurtbox</td>
+</tr>
+<tr>
+<td>Enemy hurtbox (Area2D)</td>
+<td>enemy_hurtbox</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Walls / floor</td>
+<td>world</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Notice the empty cells. Static walls don't need to look for anything — things look for
+<em>them</em>. A hurtbox just needs to exist on a layer. Most layer bugs come from filling in
+every cell "just in case".</p>
+<h2>2. Name your layers before you use them</h2>
+<p>Open <strong>Project Settings → General → Layer Names → 2D Physics</strong> and give layers 1–5 real
+names: <code>world</code>, <code>player</code>, <code>enemy</code>, <code>player_hurtbox</code>, <code>enemy_hurtbox</code>. The inspector's
+layer grid then shows those names on hover, and "why is the sword on layer 4" becomes
+a question you can answer by reading.</p>
+<p>You can read the names back in code, which is handy for a debug overlay:</p>
+<pre><code class="language-gdscript">func layer_name(n: int) -&gt; String:
+    return ProjectSettings.get_setting(&quot;layer_names/2d_physics/layer_%d&quot; % n, &quot;&quot;)
+</code></pre>
+<h2>3. The inspector counts from 1, the raw property is a bitmask</h2>
+<p>This is the trap that costs the afternoon. In the inspector, layer 3 is the third box.
+In code, <code>collision_layer</code> is a 32-bit <strong>bitmask</strong> — so this:</p>
+<pre><code class="language-gdscript">collision_layer = 3 # looks like &quot;layer 3&quot;
+</code></pre>
+<p>actually means <em>layers 1 and 2</em> (binary <code>011</code>). Layer 3 alone is <code>4</code>. Stop doing the
+arithmetic in your head and use the 1-based helpers, which match the inspector:</p>
+<pre><code class="language-gdscript">collision_layer = 0
+set_collision_layer_value(3, true)   # only layer 3
+set_collision_mask_value(1, true)    # also scan layer 1
+print(get_collision_mask_value(1))   # true
+</code></pre>
+<p>When something is off, print the mask in binary and read it right-to-left:</p>
+<pre><code class="language-gdscript">print(name, &quot; layer=&quot;, String.num_int64(collision_layer, 2),
+        &quot; mask=&quot;, String.num_int64(collision_mask, 2))
+</code></pre>
+<h2>4. Keep the numbers in one script</h2>
+<p>Once you set layers from code (spawned projectiles, a hitbox that changes team), magic
+numbers spread fast. Put them in one place:</p>
+<pre><code class="language-gdscript"># res://physics_layers.gd
+class_name PhysicsLayers
+
+const WORLD := 1
+const PLAYER := 2
+const ENEMY := 3
+const PLAYER_HURTBOX := 4
+const ENEMY_HURTBOX := 5
+</code></pre>
+<pre><code class="language-gdscript"># a bullet fired by the player
+func _ready() -&gt; void:
+    collision_layer = 0
+    collision_mask = 0
+    set_collision_mask_value(PhysicsLayers.WORLD, true)
+    set_collision_mask_value(PhysicsLayers.ENEMY_HURTBOX, true)
+</code></pre>
+<p>Keep these numbers in sync with the names from tip 2 and you never have to open the
+project settings to remember what <code>5</code> meant.</p>
+<h2>5. Area2D detection is one-way — think from the detector's side</h2>
+<p>For an <code>Area2D</code> to report something in <code>area_entered</code> or <code>body_entered</code>, <strong>the Area2D's
+mask must include the other object's layer</strong>. The other side's mask is irrelevant for
+that signal. So for a sword hitting a hurtbox:</p>
+<ul>
+<li>the <strong>sword</strong> (the one listening) masks <code>enemy_hurtbox</code>,</li>
+<li>the <strong>hurtbox</strong> sits on layer <code>enemy_hurtbox</code> and keeps <code>monitorable = true</code>.</li>
+</ul>
+<p>Listening from the hurtbox side instead works too — just mirror it. Pick one side.
+Masking both ways <em>and</em> applying damage in both signal handlers is how one slash ends
+up dealing damage twice.</p>
+<p>Moving bodies follow the same idea: <code>move_and_slide()</code> only stops against objects whose
+layer is in the <strong>moving body's</strong> mask. If the player walks through a wall, check the
+player's mask for <code>world</code>, not the wall.</p>
+<h2>6. Raycasts and ShapeCasts have their own mask (and skip areas)</h2>
+<p><code>RayCast2D</code> and <code>ShapeCast2D</code> don't care what layer their parent is on. They have their
+own <code>collision_mask</code>, and by default <code>collide_with_areas</code> is <strong>false</strong> — so a ray aimed
+at a hurtbox sees nothing. The same goes for direct space queries:</p>
+<pre><code class="language-gdscript">func line_of_sight(from: Vector2, to: Vector2) -&gt; bool:
+    var query := PhysicsRayQueryParameters2D.create(from, to)
+    query.collision_mask = 1 &lt;&lt; (PhysicsLayers.WORLD - 1) # bitmask, see tip 3
+    query.exclude = [get_rid()]
+    var hit := get_world_2d().direct_space_state.intersect_ray(query)
+    return hit.is_empty()
+</code></pre>
+<p>Note the <code>1 &lt;&lt; (n - 1)</code>: the query wants the raw bitmask, not the 1-based number.</p>
+<h2>7. TileMap walls get their layer from the TileSet</h2>
+<p>Setting the layer on a <code>TileMapLayer</code> node's inspector won't help if the walls still
+pass through things. Tile collision lives in the <strong>TileSet</strong> resource: open it, look
+under <strong>Physics Layers</strong>, and set <code>collision_layer</code> / <code>collision_mask</code> there. Each
+physics layer of the TileSet has its own pair — a one-way platform layer and a solid
+wall layer can sit on different bits.</p>
+<p>Turn on <strong>Debug → Visible Collision Shapes</strong> while you check; if the tile shapes don't
+draw, the tiles have no collision polygons painted yet and no layer setting will fix it.</p>
+<h2>The pattern behind all seven</h2>
+<p>Every tip above is bookkeeping: deciding, once, who is what and who looks for whom, and
+then never letting a raw number decide it again. For combat specifically, that table
+in tip 1 is the part people rebuild in every project — hitbox masks, hurtbox layers,
+which team hits which.</p>
+<p>Saltmire Hitbox Lite is a free, MIT <code>Hitbox2D</code> / <code>Hurtbox2D</code> pair that handles that
+table for you: you set a team on each box and it wires the layers, so a player's sword
+only finds enemy hurtboxes without you touching a single checkbox. If you'd rather keep
+your own layer plan, the tips above are everything it does under the hood.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Hitbox Lite</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-hitbox-lite?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-collision-layers-masks-tips" data-product="Saltmire Hitbox Lite" class="product-cta">https://saltmire.itch.io/saltmire-hitbox-lite</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
