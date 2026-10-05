@@ -116,7 +116,10 @@ def parse_post(path):
             # sessao escrevia o front-matter com ou sem aspas e o parser passava adiante.
             # Corrigir aqui vale pra todo post, escrito por quem for.
             if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
-                v = v[1:-1].strip()
+                q = v[0]
+                # desfaz o escape YAML da aspa interna: `"Fixing \"X\""` virava
+                # <title>Fixing \"X\"</title> com a barra visivel (05/10/2026)
+                v = v[1:-1].strip().replace("\\" + q, q)
             meta[k.strip()] = v
     meta["body_md"] = m.group(2).strip()
     meta["_file"] = os.path.basename(path)
