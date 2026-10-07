@@ -1,0 +1,224 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>GPUParticles2D vs CPUParticles2D in Godot 4 — which and when</title>
+<meta name="description" content="A practical Godot 4 comparison of GPUParticles2D and CPUParticles2D — what each one can do, how they behave on the Compatibility renderer and web exports, the first-burst stutter, and a simple rule for picking the right node for hit sparks, explosions and ambient effects.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-gpuparticles2d-vs-cpuparticles2d.html">
+<meta property="og:type" content="article"><meta property="og:title" content="GPUParticles2D vs CPUParticles2D in Godot 4 — which and when">
+<meta property="og:description" content="A practical Godot 4 comparison of GPUParticles2D and CPUParticles2D — what each one can do, how they behave on the Compatibility renderer and web exports, the first-burst stutter, and a simple rule for picking the right node for hit sparks, explosions and ambient effects."><meta property="og:url" content="https://saltmire.github.io/godot-4-gpuparticles2d-vs-cpuparticles2d.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"GPUParticles2D vs CPUParticles2D in Godot 4 \u2014 which and when","description":"A practical Godot 4 comparison of GPUParticles2D and CPUParticles2D \u2014 what each one can do, how they behave on the Compatibility renderer and web exports, the first-burst stutter, and a simple rule for picking the right node for hit sparks, explosions and ambient effects.","datePublished":"2026-10-07","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-gpuparticles2d-vs-cpuparticles2d.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>GPUParticles2D vs CPUParticles2D in Godot 4 — which and when</h1><time datetime="2026-10-07">2026-10-07</time><p>You open the Add Node dialog, type "particles", and Godot 4 offers you two nodes that
+look identical in the viewport: <code>GPUParticles2D</code> and <code>CPUParticles2D</code>. Both emit
+sprites, both have <code>amount</code>, <code>lifetime</code>, <code>one_shot</code> and <code>explosiveness</code>. The names tell
+you <em>where</em> the simulation runs, but not what that means for your game. Here's the
+practical difference, and the rule I use to pick.</p>
+<h2>GPUParticles2D: the simulation lives in a shader</h2>
+<p><code>GPUParticles2D</code> moves every particle on the graphics card. Its behaviour comes from a
+<code>ParticleProcessMaterial</code> — velocity, gravity, scale curves, color ramps — which Godot
+compiles into a shader.</p>
+<pre><code class="language-gdscript">var p := GPUParticles2D.new()
+var mat := ParticleProcessMaterial.new()
+mat.direction = Vector3(0, -1, 0)
+mat.spread = 45.0
+mat.initial_velocity_min = 120.0
+mat.initial_velocity_max = 220.0
+mat.gravity = Vector3(0, 400, 0)
+p.process_material = mat
+p.amount = 16
+p.lifetime = 0.5
+p.one_shot = true
+p.explosiveness = 1.0
+add_child(p)
+p.restart()
+</code></pre>
+<p>What it gives you that the CPU node doesn't: <strong>turbulence</strong>, <strong>collision</strong> against
+<code>LightOccluder2D</code> shapes, <strong>sub-emitters</strong> (a spark that spawns smoke when it dies),
+<strong>trails</strong>, and custom particle shaders. It also scales: thousands of particles cost
+the CPU almost nothing, because the CPU never touches them.</p>
+<p>What it costs you:</p>
+<ul>
+<li><strong>A <code>visibility_rect</code> you must maintain.</strong> The node is culled by that rectangle, and
+  the default is small. Particles that fly outside it simply vanish.</li>
+<li><strong>A first-use hitch.</strong> The process material is a shader, and shaders compile the first
+  time they're used. On many machines the very first explosion stutters for a frame. You
+  can hide it by firing each effect once off-screen during your loading screen.</li>
+<li><strong>Renderer quirks.</strong> GPU particles only work on the Compatibility renderer (the one
+  web exports and many low-end Android devices use) since Godot 4.2, and that path is
+  less battle-tested than Forward+. If you target the web, test there early.</li>
+</ul>
+<h2>CPUParticles2D: the simulation lives in a script loop</h2>
+<p><code>CPUParticles2D</code> does the same job in engine code on the CPU. There is no process
+material — every setting is a property directly on the node:</p>
+<pre><code class="language-gdscript">var p := CPUParticles2D.new()
+p.direction = Vector2(0, -1)
+p.spread = 45.0
+p.initial_velocity_min = 120.0
+p.initial_velocity_max = 220.0
+p.gravity = Vector2(0, 400)
+p.amount = 16
+p.lifetime = 0.5
+p.one_shot = true
+p.explosiveness = 1.0
+add_child(p)
+p.restart()
+</code></pre>
+<p>That's the whole point of it: <strong>it behaves the same everywhere</strong>. Forward+, Mobile,
+Compatibility, web, old integrated GPUs — the simulation is identical because it never
+depended on the graphics card. There's no shader to compile, so no first-burst hitch,
+and no <code>visibility_rect</code> to babysit — the bounds are computed for you.</p>
+<p>The trade-off is a smaller feature set (no turbulence, collision, sub-emitters or trails)
+and a cost that grows with particle count. Every particle is updated on the main CPU
+every frame. Sixteen sparks per hit is nothing. Ten thousand snowflakes is not.</p>
+<h2>The comparison</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>GPUParticles2D</th>
+<th>CPUParticles2D</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where it simulates</td>
+<td>GPU (shader)</td>
+<td>CPU (engine loop)</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td><code>ParticleProcessMaterial</code> resource</td>
+<td>properties on the node</td>
+</tr>
+<tr>
+<td>Cost of 10,000 particles</td>
+<td>low on CPU</td>
+<td>high on CPU</td>
+</tr>
+<tr>
+<td>Cost of 15 small bursts</td>
+<td>a draw + a shader each</td>
+<td>tiny</td>
+</tr>
+<tr>
+<td>Turbulence, collision, sub-emitters, trails</td>
+<td>yes</td>
+<td>no</td>
+</tr>
+<tr>
+<td>First-use shader hitch</td>
+<td>yes (pre-warm it)</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>visibility_rect</code> culling</td>
+<td>manual, easy to get wrong</td>
+<td>automatic</td>
+</tr>
+<tr>
+<td>Compatibility renderer / web</td>
+<td>supported since 4.2, test it</td>
+<td>works everywhere</td>
+</tr>
+<tr>
+<td><code>restart()</code>, <code>one_shot</code>, <code>finished</code> signal</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table>
+<h2>Switching costs one click</h2>
+<p>You don't have to commit forever. Select a <code>GPUParticles2D</code> in the editor and the
+toolbar's <strong>GPUParticles2D</strong> menu has <strong>Convert to CPUParticles2D</strong>. The CPU node has the
+reverse option in its own toolbar menu. Features the CPU node lacks are dropped in the
+conversion, so commit the scene first and compare.</p>
+<p>If you build effects in code and ship to several platforms, you can also pick at runtime:</p>
+<pre><code class="language-gdscript">func make_burst_node() -&gt; Node2D:
+    var method: String = ProjectSettings.get_setting(&quot;rendering/renderer/rendering_method&quot;)
+    if method == &quot;gl_compatibility&quot; or OS.has_feature(&quot;web&quot;):
+        return CPUParticles2D.new()
+    return GPUParticles2D.new()
+</code></pre>
+<p>If you go this route, keep your tuning values in one place (a dictionary or a custom
+resource) so both branches read the same numbers.</p>
+<h2>The rule that decides it</h2>
+<p>Ask two questions:</p>
+<ol>
+<li><strong>Is it a big, long-lived or fancy effect?</strong> Rain, snow, a fog bank, a magic vortex
+   with turbulence, sparks that bounce off walls. That's <code>GPUParticles2D</code>.</li>
+<li><strong>Is it a small, short burst that fires a lot?</strong> Hit sparks, pickup glitter, dust from
+   a footstep, a coin pop. That's <code>CPUParticles2D</code>. Especially if you export to the web.</li>
+</ol>
+<p>Most 2D action games end up with both: a few big GPU systems for ambience, and many tiny
+CPU bursts for feedback. The bursts are where the work really piles up, though — every
+new enemy hit, pickup and death wants its own tuned node, its own <code>one_shot</code> setup, and
+its own cleanup when it's done.</p>
+<p>That's the part Saltmire Spark takes off your plate. It's a free, MIT-licensed autoload
+that fires a tuned 2D burst in one line (<code>Spark.burst(pos, "hit")</code>) and frees itself
+afterwards. It doesn't use either particle node — the particles are drawn procedurally —
+so there's no process material, no <code>visibility_rect</code> and no renderer difference to think
+about.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Spark</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-spark?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-gpuparticles2d-vs-cpuparticles2d" data-product="Saltmire Spark" class="product-cta">https://saltmire.itch.io/saltmire-spark</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
