@@ -1,0 +1,177 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>What I learned making a smooth 2D camera follow in Godot 4</title>
+<meta name="description" content="Lessons from building a Camera2D that follows the player in Godot 4 — smoothing that doesn&#x27;t jitter, limits from the tilemap, teleports without a swoosh, and look-ahead that doesn&#x27;t fight screen shake.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-camera2d-follow-smoothing-limits.html">
+<meta property="og:type" content="article"><meta property="og:title" content="What I learned making a smooth 2D camera follow in Godot 4">
+<meta property="og:description" content="Lessons from building a Camera2D that follows the player in Godot 4 — smoothing that doesn&#x27;t jitter, limits from the tilemap, teleports without a swoosh, and look-ahead that doesn&#x27;t fight screen shake."><meta property="og:url" content="https://saltmire.github.io/godot-4-camera2d-follow-smoothing-limits.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"What I learned making a smooth 2D camera follow in Godot 4","description":"Lessons from building a Camera2D that follows the player in Godot 4 \u2014 smoothing that doesn't jitter, limits from the tilemap, teleports without a swoosh, and look-ahead that doesn't fight screen shake.","datePublished":"2026-10-09","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-camera2d-follow-smoothing-limits.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>What I learned making a smooth 2D camera follow in Godot 4</h1><time datetime="2026-10-09">2026-10-09</time><p>A 2D camera looks like a five-minute job. Drop a <code>Camera2D</code> under the player, tick a box,
+done. Then the sprite starts to shimmer, the camera shows the grey void past the edge of
+the level, and every respawn swooshes across the whole map. Here is what I learned making
+the camera feel right, in the order the problems showed up.</p>
+<h2>Lesson 1: a child camera is fine — until it isn't</h2>
+<p>The fastest setup is a <code>Camera2D</code> as a child of the player. It follows perfectly because
+it <em>is</em> the player's transform. That's also the problem: when the player is freed on
+death, the camera goes with it and the view snaps to the origin for a frame.</p>
+<p>What I use now is a camera that lives in the level and chases a target:</p>
+<pre><code class="language-gdscript">extends Camera2D
+
+@export var target: Node2D
+
+func _physics_process(_delta: float) -&gt; void:
+    if is_instance_valid(target):
+        global_position = target.global_position
+</code></pre>
+<p>The camera survives the player, can be pointed at a boss or a cutscene marker, and the
+<code>is_instance_valid</code> check means a freed target just leaves the camera where it was.</p>
+<h2>Lesson 2: smoothing jitter is a timing problem, not a speed problem</h2>
+<p>I turned on <code>position_smoothing_enabled</code>, and the player sprite started to vibrate while
+running. I spent too long tweaking <code>position_smoothing_speed</code>. No value fixed it.</p>
+<p>The cause: the player moves in <code>_physics_process</code> (60 Hz by default) and the camera was
+updating at the render rate. On a 144 Hz monitor they disagree on most frames, and
+smoothing makes the mismatch visible. Make both run on the same clock:</p>
+<pre><code class="language-gdscript">func _ready() -&gt; void:
+    process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
+    position_smoothing_enabled = true
+    position_smoothing_speed = 6.0
+</code></pre>
+<p>That fixed 90% of it. On Godot 4.3+, turning on <strong>Project Settings → Physics → Common →
+Physics Interpolation</strong> fixed the rest, because it renders the in-between positions
+for both the player and the camera. If you use pixel art, also check
+<code>rendering/2d/snap/snap_2d_transforms_to_pixel</code> — sub-pixel camera positions make
+pixel sprites shimmer even when the timing is right.</p>
+<h2>Lesson 3: read the limits from the level instead of typing them in</h2>
+<p>I hand-typed <code>limit_right = 3200</code> for the first level. The second level was a different
+size, and I forgot. The tilemap already knows how big the level is:</p>
+<pre><code class="language-gdscript">func fit_to_tilemap(layer: TileMapLayer) -&gt; void:
+    var used := layer.get_used_rect()
+    var cell := layer.tile_set.tile_size
+    var top_left := layer.to_global(Vector2(used.position * cell))
+    var bottom_right := layer.to_global(Vector2(used.end * cell))
+    limit_left = int(top_left.x)
+    limit_top = int(top_left.y)
+    limit_right = int(bottom_right.x)
+    limit_bottom = int(bottom_right.y)
+</code></pre>
+<p>Two details I got wrong first. Limits are in <strong>global</strong> coordinates, so a tilemap that
+isn't at the origin needs the <code>to_global</code> call. And if the level is smaller than the
+screen, Godot can't satisfy both limits at once, so one side wins and the level sits
+off-centre. For small rooms, I skip the limits and centre the camera on the room.</p>
+<p>Turn on <code>limit_smoothed = true</code> too. Without it, the camera slides smoothly everywhere
+except at the edge, where it suddenly stops dead.</p>
+<h2>Lesson 4: teleports need <code>reset_smoothing()</code></h2>
+<p>With smoothing on, every respawn, door and checkpoint made the camera glide across the
+whole level to catch up. It looks like a bug because it is one. After moving the target
+instantly, tell the camera to jump too:</p>
+<pre><code class="language-gdscript">func snap_to_target() -&gt; void:
+    global_position = target.global_position
+    reset_smoothing()
+</code></pre>
+<p>I call this from the respawn and from scene load. Calling it from <code>_ready()</code> alone
+wasn't enough, because the target sometimes got its spawn position a frame later, so
+I added a <code>call_deferred("snap_to_target")</code> there.</p>
+<h2>Lesson 5: look-ahead and screen shake both want <code>offset</code></h2>
+<p>Platformers and top-down shooters feel better when the camera leans in the direction
+you're moving, so you can see what's coming. The clean way is <code>offset</code>, because it
+doesn't fight the smoothing on <code>position</code>:</p>
+<pre><code class="language-gdscript">@export var look_ahead := 48.0
+@export var look_speed := 4.0
+
+func _physics_process(delta: float) -&gt; void:
+    if not is_instance_valid(target):
+        return
+    global_position = target.global_position
+    var dir := Vector2.ZERO
+    var vel = target.get(&quot;velocity&quot;)  # null if the target has no velocity
+    if vel is Vector2:
+        dir = vel.normalized()
+    offset = offset.lerp(dir * look_ahead, look_speed * delta)
+</code></pre>
+<p>Then I added screen shake, which <em>also</em> writes to <code>offset</code>. The two overwrote each
+other every frame. Shake vanished while running, and stopping mid-shake left the camera
+crooked. The fix is to keep each effect in its own variable and add them together in one
+place:</p>
+<pre><code class="language-gdscript">var _look := Vector2.ZERO
+var _shake := Vector2.ZERO
+
+func _physics_process(delta: float) -&gt; void:
+    # ...update _look as above, update _shake from your shake code...
+    offset = _look + _shake
+</code></pre>
+<p>That one line keeps both effects working.</p>
+<h2>What I'd do differently starting over</h2>
+<p>Start with a free-standing camera that follows a target, set to the physics clock. Read
+limits from the level, and write <code>snap_to_target()</code> before the first respawn exists.
+Treat <code>offset</code> as shared: anything that moves the view adds its own term instead of
+writing directly.</p>
+<p>That last point is where most of my camera bugs came from. Shake, hit-stop and
+look-ahead all touch the same few properties at the same moment, and mixing them by
+hand gets fiddly fast. That combination is what I eventually packaged up, so I stopped
+rewriting it every project.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Impact</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-impact?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-camera2d-follow-smoothing-limits" data-product="Saltmire Impact" class="product-cta">https://saltmire.itch.io/saltmire-impact</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
