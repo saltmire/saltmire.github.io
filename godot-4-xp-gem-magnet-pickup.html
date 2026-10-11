@@ -1,0 +1,230 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>How to make XP gems with a pickup magnet and level-up bar in Godot 4</title>
+<meta name="description" content="A step-by-step Godot 4 tutorial for survivors-style experience pickups — gems that drop from enemies, get pulled toward the player by a magnet radius, and fill an XP bar with a rising level curve.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-xp-gem-magnet-pickup.html">
+<meta property="og:type" content="article"><meta property="og:title" content="How to make XP gems with a pickup magnet and level-up bar in Godot 4">
+<meta property="og:description" content="A step-by-step Godot 4 tutorial for survivors-style experience pickups — gems that drop from enemies, get pulled toward the player by a magnet radius, and fill an XP bar with a rising level curve."><meta property="og:url" content="https://saltmire.github.io/godot-4-xp-gem-magnet-pickup.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to make XP gems with a pickup magnet and level-up bar in Godot 4","description":"A step-by-step Godot 4 tutorial for survivors-style experience pickups \u2014 gems that drop from enemies, get pulled toward the player by a magnet radius, and fill an XP bar with a rising level curve.","datePublished":"2026-10-11","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-xp-gem-magnet-pickup.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>How to make XP gems with a pickup magnet and level-up bar in Godot 4</h1><time datetime="2026-10-11">2026-10-11</time><p>Every survivors-like has the same small loop: an enemy dies, a gem drops, you walk near it,
+it flies into you, the XP bar ticks up. It looks like nothing, but a big part of the
+satisfaction comes from that loop. Get it wrong and pickups feel sticky or laggy, or they
+tank the frame rate once 300 gems are lying on the floor.</p>
+<p>This tutorial builds it in Godot 4: an XP gem scene, a magnet area on the player, a smooth
+pull that speeds up, and an <code>XP</code> component with a level curve that a UI bar can listen to.</p>
+<h2>Step 1: the gem scene</h2>
+<p>Create <code>xp_gem.tscn</code> with this tree:</p>
+<ul>
+<li><code>XPGem</code> (<strong>Area2D</strong>)</li>
+<li><code>Sprite2D</code></li>
+<li><code>CollisionShape2D</code> (small circle, radius ~6)</li>
+</ul>
+<p>Put the gem on its own physics layer, for example layer 5 "pickups", with <strong>no mask</strong>.
+The gem doesn't need to detect anything. The player's areas will detect <em>it</em>.</p>
+<pre><code class="language-gdscript"># xp_gem.gd
+extends Area2D
+
+@export var value := 1
+
+var target: Node2D = null
+var speed := 0.0
+
+const ACCEL := 900.0      # px/s² — how fast the pull ramps up
+const MAX_SPEED := 700.0
+
+func attract(to: Node2D) -&gt; void:
+    if target == null:
+        target = to
+
+func _physics_process(delta: float) -&gt; void:
+    if target == null:
+        return
+    if not is_instance_valid(target):
+        target = null
+        return
+    speed = min(speed + ACCEL * delta, MAX_SPEED)
+    global_position = global_position.move_toward(target.global_position, speed * delta)
+</code></pre>
+<p>The acceleration is the important part. A constant speed looks robotic. Starting at zero
+and ramping up gives the little "pop then whoosh" players expect.</p>
+<h2>Step 2: two areas on the player</h2>
+<p>The player needs <strong>two</strong> Area2D children, both with mask = layer 5:</p>
+<ul>
+<li><code>MagnetArea</code>: big circle (radius ~80). It decides <em>when</em> a gem starts flying.</li>
+<li><code>CollectArea</code>: small circle (radius ~12). It decides <em>when</em> a gem is absorbed.</li>
+</ul>
+<p>Keeping them separate lets you upgrade the magnet radius without changing how close a gem
+has to get before it counts.</p>
+<pre><code class="language-gdscript"># player.gd (relevant part)
+extends CharacterBody2D
+
+@onready var magnet_shape: CollisionShape2D = $MagnetArea/CollisionShape2D
+@onready var xp: XPComponent = $XPComponent
+
+func _ready() -&gt; void:
+    $MagnetArea.area_entered.connect(_on_magnet_area_entered)
+    $CollectArea.area_entered.connect(_on_collect_area_entered)
+
+func _on_magnet_area_entered(area: Area2D) -&gt; void:
+    if area.has_method(&quot;attract&quot;):
+        area.attract(self)
+
+func _on_collect_area_entered(area: Area2D) -&gt; void:
+    if area.has_method(&quot;attract&quot;):
+        xp.add(area.value)
+        area.queue_free()
+
+func set_magnet_radius(r: float) -&gt; void:
+    (magnet_shape.shape as CircleShape2D).radius = r
+</code></pre>
+<p>One gotcha: shapes are shared resources. If several scenes use the same <code>CircleShape2D</code>,
+growing it on one player grows it on all of them. Tick <strong>Local to Scene</strong> on the shape (or
+<code>duplicate()</code> it in <code>_ready</code>) before changing the radius at runtime.</p>
+<h2>Step 3: drop gems when enemies die</h2>
+<p>In your enemy's death code, spawn the gem with <code>call_deferred</code>. Death usually happens
+inside a physics callback, and adding an Area2D during one triggers the
+"Can't change this state while flushing queries" error.</p>
+<pre><code class="language-gdscript"># enemy.gd
+const GEM := preload(&quot;res://xp_gem.tscn&quot;)
+
+@export var xp_value := 1
+
+func die() -&gt; void:
+    var gem := GEM.instantiate()
+    gem.value = xp_value
+    gem.global_position = global_position
+    get_tree().current_scene.add_child.call_deferred(gem)
+    queue_free()
+</code></pre>
+<h2>Step 4: the XP component and level curve</h2>
+<p>Keep the numbers out of the player script. A small component does the math and only
+emits signals, so the UI, the upgrade screen and the audio can each react on their own.</p>
+<pre><code class="language-gdscript"># xp_component.gd
+class_name XPComponent
+extends Node
+
+signal xp_changed(current: int, needed: int)
+signal leveled_up(new_level: int)
+
+@export var base_needed := 5
+@export var growth := 1.25   # each level needs 25% more
+
+var level := 1
+var current := 0
+
+func needed_for(lvl: int) -&gt; int:
+    return int(round(base_needed * pow(growth, lvl - 1)))
+
+func add(amount: int) -&gt; void:
+    current += amount
+    # while, not if: one big gem can be worth several levels
+    while current &gt;= needed_for(level):
+        current -= needed_for(level)
+        level += 1
+        leveled_up.emit(level)
+    xp_changed.emit(current, needed_for(level))
+</code></pre>
+<p>That <code>while</code> is the most common bug in hand-rolled XP code. With <code>if</code>, a gem worth 40 XP at
+level 1 gives one level and leaves the bar over 100%.</p>
+<h2>Step 5: the XP bar</h2>
+<p>A <code>ProgressBar</code> (or <code>TextureProgressBar</code>) at the top of the screen, driven only by the
+signal:</p>
+<pre><code class="language-gdscript"># xp_bar.gd
+extends ProgressBar
+
+@export var xp_path: NodePath
+
+func _ready() -&gt; void:
+    var xp: XPComponent = get_node(xp_path)
+    xp.xp_changed.connect(_on_xp_changed)
+    _on_xp_changed(xp.current, xp.needed_for(xp.level))
+
+func _on_xp_changed(current: int, needed: int) -&gt; void:
+    max_value = needed
+    create_tween().tween_property(self, &quot;value&quot;, current, 0.15)
+</code></pre>
+<p>The short tween makes the bar slide instead of snap. On level-up it drops back toward zero
+and refills, so the player can actually see it happen.</p>
+<h2>Step 6: survive 300 gems on screen</h2>
+<p>Late in a run, gems pile up faster than the player collects them. Three cheap fixes:</p>
+<ul>
+<li><strong>Merge on the floor.</strong> If more than ~150 gems exist, spawn the new one's value into the
+  nearest existing gem instead of creating another node.</li>
+<li><strong>Don't run idle gems.</strong> Call <code>set_physics_process(false)</code> in the gem's <code>_ready()</code> and
+  turn it back on in <code>attract()</code>. Then only gems that are flying cost anything per frame.</li>
+<li><strong>Vacuum pickup.</strong> A rare drop that calls <code>attract(player)</code> on every node in a <code>"gems"</code>
+  group clears the floor and feels great.</li>
+</ul>
+<h2>Wrapping up</h2>
+<p>That's the whole loop: gem drops, magnet pull with acceleration, collect, XP curve with a
+<code>while</code>, bar that tweens. What usually comes next is the level-up draft (pick 1 of 3
+upgrades), weapons that scale with it, and waves that ramp up. That's where a small
+prototype turns into a lot of systems to keep in sync. If you'd rather start from a
+version where all of that is already wired together and data-driven, the Saltmire Survivors
+Template ships it as a playable Godot 4 project.</p><div class="cta">Built this the long way once too many times. <b>Survivors Template</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/survivors-template-godot?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-xp-gem-magnet-pickup" data-product="Survivors Template" class="product-cta">https://saltmire.itch.io/survivors-template-godot</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
