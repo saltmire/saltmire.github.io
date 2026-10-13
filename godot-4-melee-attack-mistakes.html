@@ -1,0 +1,191 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>7 Godot 4 melee attack mistakes (and the fix for each)</title>
+<meta name="description" content="Seven common mistakes when building a melee attack in Godot 4 — always-on hitboxes, one swing hitting five times, hitting yourself, the &quot;Function blocked during in/out signal&quot; error, hitboxes that don&#x27;t flip, damage in the wrong node and one-frame active windows — each with paste-able GDScript.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-melee-attack-mistakes.html">
+<meta property="og:type" content="article"><meta property="og:title" content="7 Godot 4 melee attack mistakes (and the fix for each)">
+<meta property="og:description" content="Seven common mistakes when building a melee attack in Godot 4 — always-on hitboxes, one swing hitting five times, hitting yourself, the &quot;Function blocked during in/out signal&quot; error, hitboxes that don&#x27;t flip, damage in the wrong node and one-frame active windows — each with paste-able GDScript."><meta property="og:url" content="https://saltmire.github.io/godot-4-melee-attack-mistakes.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"7 Godot 4 melee attack mistakes (and the fix for each)","description":"Seven common mistakes when building a melee attack in Godot 4 \u2014 always-on hitboxes, one swing hitting five times, hitting yourself, the \"Function blocked during in/out signal\" error, hitboxes that don't flip, damage in the wrong node and one-frame active windows \u2014 each with paste-able GDScript.","datePublished":"2026-10-13","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-melee-attack-mistakes.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>7 Godot 4 melee attack mistakes (and the fix for each)</h1><time datetime="2026-10-13">2026-10-13</time><p>A melee attack in Godot 4 looks like a ten-minute job: put an <code>Area2D</code> on the sword,
+listen for <code>area_entered</code>, subtract health. Then you playtest. The enemy dies from
+standing next to you, one swing deals triple damage, the player hits themselves, and the
+sword hitbox points right while the character faces left.</p>
+<p>These are the seven mistakes behind almost every "my melee attack is broken" thread,
+with the fix for each.</p>
+<h2>1. The hitbox is on all the time</h2>
+<p>If the sword's <code>Area2D</code> monitors every frame, anything that touches the sword takes
+damage — including an enemy that just walked into you while you were idle. A hitbox
+should only exist during the <em>active frames</em> of the attack.</p>
+<pre><code class="language-gdscript"># player.gd
+@onready var sword_hitbox: Area2D = $Pivot/SwordHitbox
+
+func _ready() -&gt; void:
+    sword_hitbox.monitoring = false
+
+func attack() -&gt; void:
+    $AnimationPlayer.play(&quot;attack&quot;)
+</code></pre>
+<p>Then, in the <code>attack</code> animation, add a <strong>Property track</strong> on
+<code>Pivot/SwordHitbox:monitoring</code>: key <code>true</code> on the frame the blade swings out, <code>false</code>
+when it's done. The animation now owns the timing, which is where a designer will look
+for it.</p>
+<h2>2. One swing hits the same enemy three times</h2>
+<p><code>area_entered</code> fires every time an overlap <em>starts</em>. If the enemy's hurtbox has two
+shapes, or the enemy gets knocked back and slides into the blade again, one swing lands
+several hits. Keep a list of what this swing already hit and clear it when a new swing
+starts:</p>
+<pre><code class="language-gdscript"># sword_hitbox.gd
+extends Area2D
+
+@export var damage := 10.0
+var _hit_this_swing: Array[Area2D] = []
+
+func _ready() -&gt; void:
+    area_entered.connect(_on_area_entered)
+
+func start_swing() -&gt; void:
+    _hit_this_swing.clear()
+
+func _on_area_entered(area: Area2D) -&gt; void:
+    if area in _hit_this_swing:
+        return
+    _hit_this_swing.append(area)
+    if area.has_method(&quot;take_hit&quot;):
+        area.take_hit(damage, global_position)
+</code></pre>
+<p>Call <code>start_swing()</code> from a <strong>Call Method</strong> track on the first frame of the attack
+animation, right before <code>monitoring</code> turns on.</p>
+<h2>3. The player hits themselves</h2>
+<p>The sword's <code>Area2D</code> overlaps the player's own hurtbox on the first frame of every
+swing. Don't fix this with <code>if area.owner == self</code> checks scattered everywhere — fix it
+in the collision bits. Put hurtboxes on team layers (<code>player_hurtbox</code>,
+<code>enemy_hurtbox</code>) and give the player's sword a mask that only contains
+<code>enemy_hurtbox</code>. The overlap never happens, so there's nothing to filter.</p>
+<h2>4. "Function blocked during in/out signal"</h2>
+<p>You try to turn the hitbox off the moment it hits something:</p>
+<pre><code class="language-gdscript">func _on_area_entered(area: Area2D) -&gt; void:
+    monitoring = false  # error!
+</code></pre>
+<p>Godot refuses, because you're changing physics state while the physics server is in the
+middle of reporting overlaps. The error message tells you the fix:</p>
+<pre><code class="language-gdscript">func _on_area_entered(area: Area2D) -&gt; void:
+    set_deferred(&quot;monitoring&quot;, false)
+</code></pre>
+<p>The same applies to toggling <code>CollisionShape2D.disabled</code> from inside a body or area
+signal — use <code>set_deferred("disabled", true)</code>.</p>
+<h2>5. The hitbox doesn't flip with the character</h2>
+<p><code>Sprite2D.flip_h = true</code> mirrors the <em>picture</em>, not the child nodes. Your sword hitbox
+stays on the right. Put everything that should mirror under a <code>Node2D</code> pivot and flip
+that instead:</p>
+<pre><code class="language-gdscript">@onready var pivot: Node2D = $Pivot  # holds Sprite2D + SwordHitbox
+
+func _physics_process(_delta: float) -&gt; void:
+    var dir := Input.get_axis(&quot;move_left&quot;, &quot;move_right&quot;)
+    if dir != 0.0:
+        pivot.scale.x = sign(dir)
+</code></pre>
+<p>Flip the pivot, not the <code>CharacterBody2D</code> itself — a negative scale on a physics body
+gets reset by the physics server and causes strange behaviour.</p>
+<h2>6. The damage logic lives in the sword</h2>
+<p>When the hitbox does <code>area.get_parent().health -= damage</code>, every attack in the game
+needs to know how every target stores health, handles invincibility frames and reacts.
+Flip the dependency: the hurtbox receives the hit and forwards it, and the receiver
+decides what happens.</p>
+<pre><code class="language-gdscript"># hurtbox.gd
+extends Area2D
+signal hurt(amount: float, from_position: Vector2)
+
+func take_hit(amount: float, from_position: Vector2) -&gt; void:
+    hurt.emit(amount, from_position)
+</code></pre>
+<p>The enemy connects <code>hurt</code> to its own health component, which can ignore the hit during
+i-frames, apply resistances or trigger knockback. The sword stays dumb, and any new
+attack — arrows, explosions, spikes — reuses the same hurtbox.</p>
+<h2>7. The active window is one frame long</h2>
+<p>A fast jab that enables <code>monitoring</code> for a single frame often misses. The new overlap is
+picked up on the next physics step, and if your animation turns the hitbox off before
+that step runs, the signal never fires. At 60 physics ticks per second, keep active
+windows at <strong>3+ physics frames</strong> (about 0.05 s). If a design really needs a single-frame
+hit, skip the signal and query directly:</p>
+<pre><code class="language-gdscript">func instant_hit() -&gt; void:
+    await get_tree().physics_frame
+    for area in sword_hitbox.get_overlapping_areas():
+        _on_area_entered(area)
+</code></pre>
+<h2>The pattern behind all seven</h2>
+<p>Every mistake above is the same thing in a different costume: a melee attack is not
+"an Area2D on a sword", it's a small contract — <em>when</em> the box is live, <em>who</em> it can
+see, <em>how many times</em> it may hit, and <em>who</em> decides what a hit means. Write that
+contract once and every attack in your game gets it for free.</p>
+<p>Saltmire Hitbox is that contract packaged as a <code>Hitbox2D</code> / <code>Hurtbox2D</code> pair for
+Godot 4: <code>activate()</code> / <code>deactivate()</code> for active windows, a one-hit-per-swing option
+with <code>reset()</code>, teams instead of hand-set collision bits, a helper that binds the
+hitbox to specific <code>AnimatedSprite2D</code> frames, plus knockback and i-frames on the
+receiving side. If you'd rather build it yourself, the seven fixes above are the core
+of what it does.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Hitbox</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-hitbox?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-melee-attack-mistakes" data-product="Saltmire Hitbox" class="product-cta">https://saltmire.itch.io/saltmire-hitbox</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
