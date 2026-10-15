@@ -1,0 +1,177 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>Fixing set_shader_parameter not working in Godot 4</title>
+<meta name="description" content="Godot 4 shader uniform won&#x27;t change from code, or a hit flash lights up every enemy at once? The 5 real causes of set_shader_parameter doing nothing — the Godot 3 rename, shared materials, silent typos, wrong tween paths, use_parent_material — and the exact fix for each.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-set-shader-parameter-not-working.html">
+<meta property="og:type" content="article"><meta property="og:title" content="Fixing set_shader_parameter not working in Godot 4">
+<meta property="og:description" content="Godot 4 shader uniform won&#x27;t change from code, or a hit flash lights up every enemy at once? The 5 real causes of set_shader_parameter doing nothing — the Godot 3 rename, shared materials, silent typos, wrong tween paths, use_parent_material — and the exact fix for each."><meta property="og:url" content="https://saltmire.github.io/godot-4-set-shader-parameter-not-working.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Fixing set_shader_parameter not working in Godot 4","description":"Godot 4 shader uniform won't change from code, or a hit flash lights up every enemy at once? The 5 real causes of set_shader_parameter doing nothing \u2014 the Godot 3 rename, shared materials, silent typos, wrong tween paths, use_parent_material \u2014 and the exact fix for each.","datePublished":"2026-10-15","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-set-shader-parameter-not-working.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>Fixing set_shader_parameter not working in Godot 4</h1><time datetime="2026-10-15">2026-10-15</time><p>Sprite shaders are the one place in Godot 4 where wrong code doesn't crash — it just
+quietly does nothing. You call a setter, the sprite doesn't change, and there is no error
+to search for. Or worse: it works, and lights up all twelve enemies on screen.</p>
+<p>The symptoms that bring people here:</p>
+<ul>
+<li><code>Invalid call. Nonexistent function 'set_shader_param' in base 'ShaderMaterial'.</code></li>
+<li>The uniform changes fine in the inspector, but nothing happens from code.</li>
+<li>One enemy gets hit and <strong>every</strong> enemy flashes white.</li>
+<li><code>Invalid property path 'shader_param/progress'</code> from a tween.</li>
+</ul>
+<p>Five causes, ordered by how often they show up.</p>
+<h2>1. You're calling the Godot 3 name</h2>
+<p><strong>Symptom.</strong> <code>Nonexistent function 'set_shader_param'</code>, or an old tutorial's
+<code>material.set("shader_param/flash", 1.0)</code> that fails silently.</p>
+<p><strong>Cause.</strong> Godot 4 renamed it. <code>shader_param</code> is gone; it's <code>shader_parameter</code> everywhere —
+the method, the property path, the <code>get_</code> version.</p>
+<p><strong>Fix.</strong></p>
+<pre><code class="language-gdscript"># Godot 3 — dead
+material.set_shader_param(&quot;flash_amount&quot;, 1.0)
+material.set(&quot;shader_param/flash_amount&quot;, 1.0)
+
+# Godot 4
+material.set_shader_parameter(&quot;flash_amount&quot;, 1.0)
+</code></pre>
+<p>Note which half fails. The method call raises an error you can see. The
+<code>material.set("shader_param/...")</code> form is a generic property write — it returns nothing
+and warns nothing, which is why it survives in copy-pasted code for months.</p>
+<h2>2. The material is shared between every instance</h2>
+<p><strong>Symptom.</strong> The shader works, but hitting one enemy flashes the whole screen's worth
+of them.</p>
+<p><strong>Cause.</strong> A <code>ShaderMaterial</code> saved as a <code>.tres</code> file, or assigned once in a scene, is
+<strong>one resource</strong>. Every instance of that scene points at the same object. Setting a
+parameter sets it for all of them. This is also why it looks right in a single-enemy
+test scene and breaks the moment you spawn a crowd.</p>
+<p><strong>Fix.</strong> Give each instance its own copy on spawn:</p>
+<pre><code class="language-gdscript">func _ready() -&gt; void:
+    # shallow duplicate: own parameter values, same compiled Shader
+    var mat := sprite.material as ShaderMaterial
+    if mat:
+        sprite.material = mat.duplicate()
+</code></pre>
+<p>Or do it without code: select the material in the inspector and tick <strong>Resource &gt;
+Local to Scene</strong>. Each instantiated scene then gets its own copy automatically.</p>
+<p>Worth knowing: the per-instance uniform shortcut
+(<code>set_instance_shader_parameter</code>) lives on <code>GeometryInstance3D</code>, not on <code>CanvasItem</code>. In
+2D, <code>duplicate()</code> or Local to Scene is the answer.</p>
+<h2>3. The uniform name doesn't match — and Godot won't tell you</h2>
+<p><strong>Symptom.</strong> No error at all. The call runs, nothing changes.</p>
+<p><strong>Cause.</strong> <code>set_shader_parameter()</code> accepts any name. If no uniform matches — a typo, a
+renamed uniform, the wrong shader on the node — the value is stored and never read.
+There is no warning.</p>
+<p><strong>Fix.</strong> Check against the shader's actual uniform list instead of guessing:</p>
+<pre><code class="language-gdscript">func _ready() -&gt; void:
+    var mat := sprite.material as ShaderMaterial
+    for u in mat.shader.get_shader_uniform_list():
+        print(u[&quot;name&quot;], &quot; : &quot;, u[&quot;type&quot;])
+</code></pre>
+<p>Two related traps:</p>
+<ul>
+<li>A uniform you never declared in the shader won't appear in the inspector either — that's
+  your fastest check. Visible in the inspector, ignored from code means a typo in the
+  string, not a shader problem.</li>
+<li><code>get_shader_parameter()</code> returns <code>null</code> when nothing has been set on that material. It
+  does not fall back to the default written in the shader, so don't use it to read a
+  starting value.</li>
+</ul>
+<h2>4. A tween is animating the wrong property path</h2>
+<p><strong>Symptom.</strong> <code>Invalid property path</code>, or a tween that completes instantly with no visible
+change.</p>
+<p><strong>Cause.</strong> Tweening a uniform means tweening a property <strong>on the material</strong>, with the
+Godot 4 path, not the node and not the Godot 3 prefix.</p>
+<p><strong>Fix.</strong></p>
+<pre><code class="language-gdscript">func flash() -&gt; void:
+    var mat := sprite.material as ShaderMaterial
+    mat.set_shader_parameter(&quot;flash_amount&quot;, 1.0)
+    var tw := create_tween()
+    tw.tween_property(mat, &quot;shader_parameter/flash_amount&quot;, 0.0, 0.15)
+</code></pre>
+<p><code>create_tween()</code> on the node binds the tween's life to that node, so a dying enemy can't
+leave a tween poking at a freed material.</p>
+<h2>5. <code>use_parent_material</code> is on</h2>
+<p><strong>Symptom.</strong> Setting the parameter on the node's own material does nothing, and the
+inspector seems to ignore the material too.</p>
+<p><strong>Cause.</strong> <code>CanvasItem.use_parent_material</code> is checked (sometimes inherited from a scene
+you copied). The node renders with the parent's material; its own is unused.</p>
+<p><strong>Fix.</strong> Uncheck it, or set the parameter on whichever material actually renders:</p>
+<pre><code class="language-gdscript">var mat := sprite.material as ShaderMaterial
+if sprite.use_parent_material:
+    mat = sprite.get_parent().material as ShaderMaterial
+</code></pre>
+<h2>The quick triage order</h2>
+<p>When a uniform won't move, go in this order: is the name in
+<code>get_shader_uniform_list()</code>? Is <code>use_parent_material</code> off? Is the material a
+<code>duplicate()</code> or Local to Scene? Is the tween path
+<code>shader_parameter/&lt;name&gt;</code>? Four checks and the silent cases stop being mysterious.</p>
+<p>Most of this is plumbing, not effects work — which is the thinking behind Saltmire FX.
+Each call (<code>FX.hit_flash($Sprite2D)</code>, <code>FX.dissolve($Sprite2D)</code>, outline, freeze,
+hologram) builds a fresh <code>ShaderMaterial</code> on the node you passed in, so causes 1, 2 and 3
+can't reach your code: nothing is shared between instances and no uniform name is spelled
+on your side. The tweens come from <code>target.create_tween()</code>, for the lifetime reason in
+cause 4. It's MIT and the shaders are plain <code>.gdshader</code> files, so you can read exactly
+what it does, or lift the pattern and keep writing it yourself — the five checks above are
+the whole of it either way.</p><div class="cta">Built this the long way once too many times. <b>Saltmire FX</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-fx?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-set-shader-parameter-not-working" data-product="Saltmire FX" class="product-cta">https://saltmire.itch.io/saltmire-fx</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
