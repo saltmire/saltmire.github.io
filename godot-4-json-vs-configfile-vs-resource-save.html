@@ -1,0 +1,244 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="google-site-verification" content="NRdTRCtBSnyvD3n-5LdnRtloOkbNX9RzroWI8vIDe3A">
+<title>JSON vs ConfigFile vs Resource in Godot 4 — which save format and when</title>
+<meta name="description" content="A practical Godot 4 comparison of the three built-in ways to save a game — JSON, ConfigFile and custom Resources — covering type loss, Vector2 round-trips, the security warning on .tres saves, modding and schema changes, with a rule for picking one.">
+<link rel="canonical" href="https://saltmire.github.io/godot-4-json-vs-configfile-vs-resource-save.html">
+<meta property="og:type" content="article"><meta property="og:title" content="JSON vs ConfigFile vs Resource in Godot 4 — which save format and when">
+<meta property="og:description" content="A practical Godot 4 comparison of the three built-in ways to save a game — JSON, ConfigFile and custom Resources — covering type loss, Vector2 round-trips, the security warning on .tres saves, modding and schema changes, with a rule for picking one."><meta property="og:url" content="https://saltmire.github.io/godot-4-json-vs-configfile-vs-resource-save.html">
+<meta property="og:site_name" content="Saltmire Devlog">
+<meta name="twitter:card" content="summary">
+<style>
+:root{--bg:#0b0f1a;--bg2:#0e1524;--fg:#e6eefc;--muted:#93a7c6;--accent:#7cfc98;--card:#121a2c;--border:#1e2a44}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0e1524,#090c14);color:var(--fg);
+font:16px/1.7 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{padding:34px 0 10px}
+header.site .brand{font-size:22px;font-weight:700;color:#fff}
+header.site .tag{color:var(--muted);margin-top:4px}
+nav.site{margin-top:14px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+nav.site a{color:var(--muted);margin-right:18px;font-size:14px}
+main{padding:26px 0 10px}
+h1{font-size:30px;line-height:1.25;color:#fff;margin:.2em 0 .3em}
+h2{font-size:22px;color:#fff;margin-top:1.8em}
+article time,.post-list time{color:var(--muted);font-size:13px}
+pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+overflow:auto;font-size:14px}
+code{background:#0f1728;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.92em}
+pre code{background:none;border:none;padding:0}
+.cta{margin:30px 0;padding:18px 20px;background:var(--card);border:1px solid var(--border);
+border-left:3px solid var(--accent);border-radius:8px}
+.cta b{color:#fff}
+.post-list{list-style:none;padding:0}
+.post-list li{padding:18px 0;border-bottom:1px solid var(--border)}
+.post-list a.title{font-size:19px;color:#fff;font-weight:600}
+.post-list p{color:var(--muted);margin:.4em 0 0}
+footer.site{margin-top:40px;padding:26px 0;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.bundle{margin:24px 0 34px;padding:20px;background:var(--card);border:1px solid var(--accent);border-radius:8px}
+.bundle .was{color:var(--muted);text-decoration:line-through;margin-left:8px;font-weight:400;font-size:16px}
+.bundle .now{color:var(--accent);font-size:26px;font-weight:700}
+.bundle .off{color:var(--fg);background:#173a26;border:1px solid var(--accent);border-radius:4px;
+padding:2px 7px;font-size:12px;margin-left:8px;vertical-align:middle}
+.tools{list-style:none;padding:0;margin:0}
+.tools li{padding:16px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;
+align-items:baseline;flex-wrap:wrap}
+.tools .name{color:#fff;font-weight:600;font-size:17px;flex:1 1 260px}
+.tools .price{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tools .price.free{color:var(--muted);font-weight:400}
+.tools .blurb{color:var(--muted);flex:1 1 100%;margin:0;font-size:15px}
+.tools .lite,.tools .tut{font-size:13px}
+.tools .meta{flex:1 1 100%;display:flex;gap:18px;flex-wrap:wrap;margin-top:2px}
+.tools pre{flex:1 1 100%;margin:10px 0 4px;font-size:13px;padding:10px 13px}
+.badge{background:#173a26;border:1px solid var(--accent);color:var(--accent);
+border-radius:4px;padding:2px 7px;font-size:12px;white-space:nowrap}
+.compat{color:var(--muted);font-size:14px;margin:-6px 0 22px}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"JSON vs ConfigFile vs Resource in Godot 4 \u2014 which save format and when","description":"A practical Godot 4 comparison of the three built-in ways to save a game \u2014 JSON, ConfigFile and custom Resources \u2014 covering type loss, Vector2 round-trips, the security warning on .tres saves, modding and schema changes, with a rule for picking one.","datePublished":"2026-10-17","author":{"@type":"Organization","name":"Saltmire"},"publisher":{"@type":"Organization","name":"Saltmire"},"mainEntityOfPage":"https://saltmire.github.io/godot-4-json-vs-configfile-vs-resource-save.html"}</script>
+</head><body><div class="wrap">
+<header class="site"><div class="brand">Saltmire</div>
+<div class="tag">Practical Godot 4 tutorials — game feel, saving, and shipping polish fast.</div>
+<nav class="site"><a href="https://saltmire.github.io/">Home</a><a href="https://saltmire.github.io/tools.html">Tools &amp; templates</a>
+<a href="https://github.com/saltmire">GitHub</a></nav></header><main>
+<article><h1>JSON vs ConfigFile vs Resource in Godot 4 — which save format and when</h1><time datetime="2026-10-17">2026-10-17</time><p>Godot 4 gives you three sanctioned ways to write a save file, and the docs describe each
+one without ever telling you which to pick. So you pick the first one you read about,
+ship it, and discover the trade-off six months later when a player's <code>Vector2</code> comes back
+as a <code>Dictionary</code> or an old save crashes the new build. Here's what each format actually
+costs.</p>
+<h2>JSON: portable, readable, type-lossy</h2>
+<p><code>FileAccess</code> plus <code>JSON</code> is the path most tutorials take, because it's the one that
+looks like saving in every other language.</p>
+<pre><code class="language-gdscript">func save_game(data: Dictionary) -&gt; void:
+    var f := FileAccess.open(&quot;user://save.json&quot;, FileAccess.WRITE)
+    f.store_string(JSON.stringify(data, &quot;\t&quot;))
+
+func load_game() -&gt; Dictionary:
+    if not FileAccess.file_exists(&quot;user://save.json&quot;):
+        return {}
+    var f := FileAccess.open(&quot;user://save.json&quot;, FileAccess.READ)
+    var parsed = JSON.parse_string(f.get_as_text())
+    return parsed if parsed is Dictionary else {}
+</code></pre>
+<p>The catch is that JSON has no idea what a Godot type is. It knows objects, arrays,
+strings, numbers, booleans and null — that's the whole list. Three consequences bite in
+practice:</p>
+<ul>
+<li><strong>Numbers come back as floats.</strong> Save <code>level = 3</code>, load <code>3.0</code>. Anything you feed to an
+  array index or a <code>match</code> on an int needs an explicit <code>int()</code> on the way out.</li>
+<li><strong>Dictionary keys become strings.</strong> <code>{1: "sword"}</code> saves and loads as <code>{"1": "sword"}</code>.
+  Inventory slots keyed by int are the usual victim.</li>
+<li><strong>Vector2, Color and friends don't survive.</strong> You convert them by hand going in and
+  coming out, every field, forever.</li>
+</ul>
+<p>What you get in exchange is real: the file is plain text any tool can read, nothing in it
+can execute, and you can parse it outside Godot — a web leaderboard, a Python script, a
+save editor you write in an afternoon.</p>
+<h2>ConfigFile: Variants that round-trip, in an INI file</h2>
+<p><code>ConfigFile</code> stores sections and keys, and it keeps Godot's own types.</p>
+<pre><code class="language-gdscript">func save_game() -&gt; void:
+    var cfg := ConfigFile.new()
+    cfg.set_value(&quot;player&quot;, &quot;position&quot;, Vector2(120, 48))
+    cfg.set_value(&quot;player&quot;, &quot;hp&quot;, 3)
+    cfg.set_value(&quot;world&quot;, &quot;unlocked&quot;, [&quot;cave&quot;, &quot;ridge&quot;])
+    cfg.save(&quot;user://save.cfg&quot;)
+
+func load_game() -&gt; void:
+    var cfg := ConfigFile.new()
+    if cfg.load(&quot;user://save.cfg&quot;) != OK:
+        return
+    var pos: Vector2 = cfg.get_value(&quot;player&quot;, &quot;position&quot;, Vector2.ZERO)
+    var hp: int = cfg.get_value(&quot;player&quot;, &quot;hp&quot;, 3)
+</code></pre>
+<p><code>Vector2</code> goes in and <code>Vector2</code> comes out. <code>3</code> stays an <code>int</code>. Arrays and Dictionaries of
+Variants work too, and <code>get_value()</code> takes a default as its third argument — which quietly
+solves the "player has an old save without this key" problem that forces try/except
+gymnastics in JSON.</p>
+<p>The limits: it stores Variants, not objects, so a custom class instance isn't going in.
+It's flat by nature — two levels, section and key — so deeply nested state gets encoded as
+one big Dictionary value and you've lost the readability you came for. And the format is
+Godot's own, so nothing outside the engine parses it for free.</p>
+<h2>Resource: typed, autocompleted, and the one with a security warning</h2>
+<p>A custom <code>Resource</code> turns your save into a class with real fields.</p>
+<pre><code class="language-gdscript">class_name SaveData extends Resource
+
+@export var hp: int = 3
+@export var position: Vector2 = Vector2.ZERO
+@export var unlocked: Array[String] = []
+</code></pre>
+<pre><code class="language-gdscript">func save_game(data: SaveData) -&gt; void:
+    ResourceSaver.save(data, &quot;user://save.tres&quot;)
+
+func load_game() -&gt; SaveData:
+    if not ResourceLoader.exists(&quot;user://save.tres&quot;):
+        return SaveData.new()
+    return load(&quot;user://save.tres&quot;) as SaveData
+</code></pre>
+<p>Typos become editor errors instead of runtime nils, and you get autocomplete on your own
+save. It is by far the nicest to write.</p>
+<p>Two things to know before you ship it. First, <strong>resource files can reference scripts, and
+loading one runs them</strong> — the Godot docs say outright not to load resources from untrusted
+sources. A save file in <code>user://</code> is a file the player (or anything else on their machine)
+can swap. If your game ever accepts a save from elsewhere — cloud sync, a Discord
+"try my seed", a modding scene — that's a code-execution path, not just a cheating one.
+Second, the file is tied to your script: rename the class, move the file, or drop an
+<code>@export</code> and old saves stop loading cleanly.</p>
+<h2>The comparison</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>JSON</th>
+<th>ConfigFile</th>
+<th>Resource (.tres)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Keeps <code>int</code> vs <code>float</code></td>
+<td>no</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>Vector2</code> / <code>Color</code> round-trip</td>
+<td>manual</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Dictionary int keys</td>
+<td>become strings</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Typed fields + autocomplete</td>
+<td>no</td>
+<td>no</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Readable / editable by players</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes (and riskier)</td>
+</tr>
+<tr>
+<td>Parseable outside Godot</td>
+<td>yes</td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Missing key has a default</td>
+<td>hand-rolled</td>
+<td>built in</td>
+<td>class default</td>
+</tr>
+<tr>
+<td>Safe to load untrusted files</td>
+<td>yes</td>
+<td>yes</td>
+<td><strong>no</strong></td>
+</tr>
+<tr>
+<td>Survives renaming your classes</td>
+<td>yes</td>
+<td>yes</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Built-in password encryption</td>
+<td>via <code>FileAccess</code></td>
+<td><code>save_encrypted_pass</code></td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<p>One honest note on that last row: the key ships inside your game binary, so encryption
+here stops casual editing, not a determined player.</p>
+<h2>The rule</h2>
+<p><strong>Shipping a single-player game and you want the least future pain?</strong> ConfigFile. It
+round-trips Godot's types, defaults are built in, and nothing in it can run.</p>
+<p><strong>Anything outside Godot ever reads the save</strong> — a server, a stats page, a tool? JSON, and
+pay the type-casting tax deliberately.</p>
+<p><strong>Prototype or jam, all internal, speed is everything?</strong> Resource. Just know you'll want
+to move off it before you accept a save file you didn't write.</p>
+<p>Whichever you pick, the format is the easy half. The half that shows up later is
+versioning old saves into a new schema, not corrupting the file when the game is killed
+mid-write, and keeping a backup to fall back on. Saltmire Save is the paid tool I built
+after writing that layer one time too many: one-line save and load, plus schema migration,
+backup recovery, gzip compression and encryption — MIT licensed, so you can read exactly
+how it handles each of these.</p><div class="cta">Built this the long way once too many times. <b>Saltmire Save</b> does it as a drop-in tool: <a href="https://saltmire.itch.io/saltmire-save?utm_source=saltmire-blog&utm_medium=cta&utm_campaign=godot-4-json-vs-configfile-vs-resource-save" data-product="Saltmire Save" class="product-cta">https://saltmire.itch.io/saltmire-save</a></div></article></main><footer class="site">
+Saltmire — small, honest, drop-in tools for Godot 4.
+<a href="https://saltmire.itch.io">saltmire.itch.io</a>.
+Built with AI assistance, reviewed by hand. No AI art or audio.
+</footer></div>
+<script>(function(){var E="https://saltmire-hits.netlify.app/api/hit";
+function h(q){(new Image(1,1)).src=E+q+"&t="+Date.now();}
+h("?p="+encodeURIComponent(location.pathname)+"&r="+encodeURIComponent(document.referrer));
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a");
+if(!a||!a.host||!/itch\.io$|assetstore\.unity\.com$/.test(a.host))return;
+h("?e=out&h="+encodeURIComponent(location.pathname+">"+a.host+a.pathname));},true);})();</script>
+</body></html>
